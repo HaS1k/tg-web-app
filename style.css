@@ -1,0 +1,107 @@
+/* Общие стили */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    text-align: center;
+}
+
+/* Контейнер */
+.container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+/* Заголовок */
+h1 {
+    color: #ff6b00;
+    font-size: 24px;
+}
+
+/* Список товаров */
+.items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+}
+
+/* Карточка товара */
+.item-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    width: 45%;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.item-card:hover {
+    transform: scale(1.05);
+}
+
+/* Изображение товара */
+.item-card img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* Название товара */
+.item-card h3 {
+    font-size: 16px;
+    margin: 10px 0;
+}
+
+/* Цена */
+.item-card p {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Кнопка "Добавить в корзину" */
+.add-to-cart {
+    background: #ff6b00;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.add-to-cart:hover {
+    background: #e65a00;
+}
+
+/* Кнопка "Оформить заказ" */
+.order-button {
+    background: #0084ff;
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    transition: background 0.2s;
+}
+
+.order-button:hover {
+    background: #0072e6;
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+    .item-card {
+        width: 100%;
+    }
+}
