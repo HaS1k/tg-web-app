@@ -29,7 +29,7 @@ async def start_cmd(message: types.Message):
  keyboard=[
   [
    KeyboardButton(
-    text='open',web_app=WebAppInfo(url='https://storied-souffle-8bb402.netlify.app')
+    text='open',web_app=WebAppInfo(url='https://storied-souffle-8bb402.netlify.app/')
    )
   ]
  ]
