@@ -6,61 +6,156 @@
     <link rel="stylesheet" href="styles.css">
 
     <title>Магазин</title>
+    <!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин доставки еды</title>
+    <link rel="stylesheet" href="styles.css">
     <script>
         let cart = [];
+        let items = [
+            { id: 1, name: "Бургер", price: 150, category: "burgers", description: "Сочный говяжий бургер с соусом BBQ", img: "https://via.placeholder.com/100" },
+            { id: 2, name: "Пицца", price: 400, category: "burgers", description: "Пицца с сыром моцарелла и томатным соусом", img: "https://via.placeholder.com/100" },
+            { id: 3, name: "Кола", price: 100, category: "drinks", description: "Охлажденный газированный напиток", img: "https://via.placeholder.com/100" },
+            { id: 4, name: "Мороженое", price: 120, category: "desserts", description: "Шоколадное мороженое с орехами", img: "https://via.placeholder.com/100" }
+        ];
 
-        function addToCart(id, name, price) {
-            let item = cart.find(i => i.id === id);
-            if (item) {
-                item.quantity++;
+        function showItems(category) {
+            let itemsContainer = document.getElementById("items");
+            itemsContainer.innerHTML = "";
+
+            let filteredItems = items.filter(item => item.category === category);
+            filteredItems.forEach(item => {
+                let itemCard = document.createElement("div");
+                itemCard.className = "item-card";
+                itemCard.innerHTML = `
+                    <img src="${item.img}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+                    <h3>${item.name}</h3>
+                    <p>${item.price}₽</p>
+                    <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
+                `;
+                itemsContainer.appendChild(itemCard);
+            });
+        }
+
+        function showItemDetails(id) {
+            let item = items.find(i => i.id === id);
+            let modal = document.getElementById("item-modal");
+            let modalContent = document.getElementById("modal-content");
+            modalContent.innerHTML = `
+                <h2>${item.name}</h2>
+                <img src="${item.img}" alt="${item.name}">
+                <p>${item.description}</p>
+                <p><strong>Цена: ${item.price}₽</strong></p>
+                <button class="add-to-cart" onclick="addToCart(${item.id}); closeModal()">Добавить в корзину</button>
+            `;
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("item-modal").style.display = "none";
+        }
+
+        function addToCart(id) {
+            let item = items.find(i => i.id === id);
+            let cartItem = cart.find(i => i.id === id);
+            if (cartItem) {
+                cartItem.quantity++;
             } else {
-                cart.push({ id, name, price, quantity: 1 });
+                cart.push({ ...item, quantity: 1 });
             }
-            alert(`${name} добавлен в корзину!`);
+            updateCartButton();
+        }
+
+        function updateCartButton() {
+            let cartBtn = document.getElementById("cart-button");
+            let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartBtn.innerText = `🛒 Корзина (${totalItems})`;
+        }
+
+        function showCart() {
+            let cartModal = document.getElementById("cart-modal");
+            let cartContent = document.getElementById("cart-content");
+            cartContent.innerHTML = "";
+
+            if (cart.length === 0) {
+                cartContent.innerHTML = "<p>Корзина пуста</p>";
+            } else {
+                cart.forEach(item => {
+                    let cartItem = document.createElement("div");
+                    cartItem.className = "cart-item";
+                    cartItem.innerHTML = `
+                        <p>${item.name} - ${item.price}₽</p>
+                        <input type="number" min="1" value="${item.quantity}" onchange="updateQuantity(${item.id}, this.value)">
+                        <button onclick="removeFromCart(${item.id})">❌</button>
+                    `;
+                    cartContent.appendChild(cartItem);
+                });
+            }
+            cartModal.style.display = "block";
+        }
+
+        function updateQuantity(id, quantity) {
+            let cartItem = cart.find(i => i.id === id);
+            if (cartItem) {
+                cartItem.quantity = parseInt(quantity);
+            }
+            updateCartButton();
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            updateCartButton();
+            showCart();
         }
 
         function placeOrder() {
-            const order = {
-                user_id: 12345, // Здесь можно получить user_id из Telegram WebApp
-                items: cart
-            };
-
-            // Отправляем заказ в Telegram Web App
-            if (window.Telegram && Telegram.WebApp) {
-                Telegram.WebApp.sendData(JSON.stringify(order));
-                Telegram.WebApp.close();
-            } else {
-                alert("Telegram WebApp не найден.");
+            if (cart.length === 0) {
+                alert("Корзина пуста!");
+                return;
             }
+            const order = { user_id: 12345, items: cart };
+            Telegram.WebApp.sendData(JSON.stringify(order));
+            Telegram.WebApp.close();
         }
     </script>
 </head>
 <body>
     <div class="container">
         <h1>🍔 Магазин доставки еды</h1>
-        
-        <div class="items">
-            <div class="item-card">
-                <img src="https://via.placeholder.com/100" alt="Бургер">
-                <h3>Бургер</h3>
-                <p>150₽</p>
-                <button class="add-to-cart" onclick="addToCart(1, 'Бургер', 150)">Добавить</button>
-            </div>
 
-            <div class="item-card">
-                <img src="https://via.placeholder.com/100" alt="Пицца">
-                <h3>Пицца</h3>
-                <p>400₽</p>
-                <button class="add-to-cart" onclick="addToCart(2, 'Пицца', 400)">Добавить</button>
-            </div>
-
-            <div class="item-card">
-                <img src="https://via.placeholder.com/100" alt="Кола">
-                <h3>Кола</h3>
-                <p>100₽</p>
-                <button class="add-to-cart" onclick="addToCart(3, 'Кола', 100)">Добавить</button>
-            </div>
+        <!-- Разделы товаров -->
+        <div class="categories">
+            <button onclick="showItems('burgers')">🍔 Бургеры</button>
+            <button onclick="showItems('drinks')">🥤 Напитки</button>
+            <button onclick="showItems('desserts')">🍰 Десерты</button>
         </div>
+
+        <!-- Список товаров -->
+        <div id="items" class="items"></div>
+
+        <!-- Кнопка корзины -->
+        <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
+    </div>
+
+    <!-- Окно описания товара -->
+    <div id="item-modal" class="modal">
+        <div class="modal-content" id="modal-content"></div>
+        <button onclick="closeModal()">Закрыть</button>
+    </div>
+
+    <!-- Окно корзины -->
+    <div id="cart-modal" class="modal">
+        <h2>Корзина</h2>
+        <div id="cart-content"></div>
+        <button class="order-button" onclick="placeOrder()">✅ Оформить заказ</button>
+        <button onclick="document.getElementById('cart-modal').style.display='none'">Закрыть</button>
+    </div>
+</body>
+</html>
+
     <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
 </body>
 </html>
