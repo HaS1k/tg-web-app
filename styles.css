@@ -8,6 +8,7 @@ body {
     text-align: center;
 }
 
+
 /* Контейнер */
 .container {
     max-width: 600px;
@@ -19,6 +20,28 @@ body {
 h1 {
     color: #ff6b00;
     font-size: 24px;
+}
+
+/* Разделы товаров */
+.categories {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+}
+
+.categories button {
+    background: #ff6b00;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.categories button:hover {
+    background: #e65a00;
 }
 
 /* Список товаров */
@@ -50,6 +73,7 @@ h1 {
     height: 100px;
     object-fit: cover;
     border-radius: 8px;
+    cursor: pointer;
 }
 
 /* Название товара */
@@ -80,7 +104,111 @@ h1 {
     background: #e65a00;
 }
 
-/* Кнопка "Оформить заказ" */
+/* Кнопка корзины */
+.cart-button {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0084ff;
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 90%;
+    transition: background 0.2s;
+}
+
+.cart-button:hover {
+    background: #0072e6;
+}
+
+/* Всплывающее окно (модальное) */
+.modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    z-index: 1000;
+    width: 80%;
+    max-width: 400px;
+}
+
+/* Затемненный фон при открытии модального окна */
+.modal::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+}
+
+/* Картинка в модальном окне */
+.modal img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* Кнопка закрытия модального окна */
+.modal button {
+    background: #e65a00;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+    transition: background 0.2s;
+}
+
+.modal button:hover {
+    background: #cc4e00;
+}
+
+/* Стили для корзины */
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f1f1f1;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.cart-item input {
+    width: 40px;
+    text-align: center;
+}
+
+/* Кнопка удаления товара */
+.cart-item button {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cart-item button:hover {
+    background: darkred;
+}
+
+/* Кнопка оформления заказа */
 .order-button {
     background: #0084ff;
     color: white;
