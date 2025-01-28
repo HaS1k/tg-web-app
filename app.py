@@ -71,7 +71,7 @@ async def fetch_menu():
                 }
             else:  # Это товар
                 image_list = item.get("images")
-                image_url = f"https://api.sbis.ru/retail{image_list[0]}" if image_list and isinstance(image_list, list) and len(image_list) > 0 else "https://via.placeholder.com/100"
+                image_url = f"https://api.sbis.ru/retail{image_list[0]}" if image_list and isinstance(image_list, list) and len(image_list) > 0 else ".jpg"
                 
                 items[hierarchical_id] = {
                     "name": item.get("name"),
