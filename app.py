@@ -53,20 +53,25 @@ async def fetch_menu():
         for item in data:
             hierarchical_id = item.get("hierarchicalId")
             parent_id = item.get("hierarchicalParent")
-            if item.get("id") is None:  # Это категория
-                categories[hierarchical_id] = {
-                    "name": item.get("name"),
-                    "subcategories": [],
-                    "items": []
-                }
-            else:  # Это товар
-                items[hierarchical_id] = {
-                    "name": item.get("name"),
-                    "price": item.get("cost"),
-                    "description": item.get("description"),
-                    "image": f"https://api.sbis.ru/retail{item.get('images', [''])[0]}",
-                    "parent": parent_id
-                }
+
+        if item.get("id") is None:  # Это категория
+            categories[hierarchical_id] = {
+                "name": item.get("name"),
+                "subcategories": [],
+                "items": []
+            }
+        else:  # Это товар
+            image_list = item.get("images")
+            image_url = f"https://api.sbis.ru/retail{image_list[0]}" if image_list and isinstance(image_list, list) and len(image_list) > 0 else "https://via.placeholder.com/100"
+
+            items[hierarchical_id] = {
+                "name": item.get("name"),
+                "price": item.get("cost"),
+                "description": item.get("description"),
+                "image": image_url,
+                "parent": parent_id
+            }
+
         
         # Связываем товары и категории
         for item_id, item in items.items():
