@@ -9,21 +9,24 @@
         let cart = [];
         let items = [];
         let categories = {};
-
         async function fetchMenu() {
-            try {
-                let response = await fetch('http://localhost:8080/menu');
-                let data = await response.json();
+    try {
+        let response = await fetch('http://localhost:8080/menu');
+        let data = await response.json();
 
-                if (Array.isArray(data)) {
-                    processMenuData(data);
-                } else {
-                    console.error('Ошибка: полученные данные не являются массивом', data);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки меню:', error);
-            }
+        // Логируем данные, чтобы увидеть, что приходит от сервера
+        console.log('Полученные данные:', data);
+
+        if (Array.isArray(data)) {
+            processMenuData(data);
+        } else {
+            console.error('Ошибка: полученные данные не являются массивом', data);
         }
+    } catch (error) {
+        console.error('Ошибка загрузки меню:', error);
+    }
+}
+
 
         function processMenuData(data) {
             data.forEach(item => {
