@@ -14,7 +14,12 @@
             try {
                 let response = await fetch('http://localhost:8080/menu');
                 let data = await response.json();
-                processMenuData(data);
+
+                if (Array.isArray(data)) {
+                    processMenuData(data);
+                } else {
+                    console.error('Ошибка: полученные данные не являются массивом', data);
+                }
             } catch (error) {
                 console.error('Ошибка загрузки меню:', error);
             }
@@ -23,24 +28,23 @@
         function processMenuData(data) {
             data.forEach(item => {
                 if (!categories[item.hierarchicalParent]) {
-                    categories[item.hierarchicalParent] = [];
+                categories[item.hierarchicalParent] = [];
                 }
-                categories[item.hierarchicalParent].push(item);
+            categories[item.hierarchicalParent].push(item);
             });
             renderCategories();
         }
 
-        function renderCategories() {
-            let categoriesContainer = document.querySelector(".categories");
-            categoriesContainer.innerHTML = "";
-            Object.keys(categories).forEach(categoryId => {
-                let categoryButton = document.createElement("button");
-                categoryButton.innerText = `Категория ${categoryId}`;
-                categoryButton.onclick = () => showItems(categoryId);
-                categoriesContainer.appendChild(categoryButton);
-            });
-        }
-
+function renderCategories() {
+    let categoriesContainer = document.querySelector(".categories");
+    categoriesContainer.innerHTML = "";
+    Object.keys(categories).forEach(categoryId => {
+        let categoryButton = document.createElement("button");
+        categoryButton.innerText = `Категория ${categoryId}`;
+        categoryButton.onclick = () => showItems(categoryId);
+        categoriesContainer.appendChild(categoryButton);
+    });
+}
         function showItems(categoryId) {
             let itemsContainer = document.getElementById("items");
             itemsContainer.innerHTML = "";

@@ -12,6 +12,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from fastapi import FastAPI
 from dotenv import find_dotenv, load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 load_dotenv(find_dotenv())
 
@@ -112,14 +113,35 @@ def get_menu():
     print("Запрос данных через API FastAPI")
     return menu_data
 
-async def main():
+# Функция для старта бота
+async def on_start():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
+# Создаем задачу для бота
+async def start_bot():
+    await on_start()
 
+# FastAPI маршрут
+@app.get("/")
+async def read_root():
+    return {"message": "Hello, World!"}
 
+# Основная асинхронная функция, которая запускает и сервер, и бота
+async def main():
+    # Запускаем бота в фоновом режиме
+    bot_task = asyncio.create_task(start_bot())
+    
+    # Запускаем сервер FastAPI
+    config = uvicorn.Config(app, host="0.0.0.0", port=8080)
+    server = uvicorn.Server(config)
+    
+    # Запускаем сервер в фоновом режиме
+    server_task = asyncio.create_task(server.serve())
+
+    # Ждем завершения обоих процессов
+    await asyncio.gather(bot_task, server_task)
+
+# Запуск приложения с использованием asyncio
 if __name__ == "__main__":
-    import uvicorn
-    # Запускаем FastAPI приложение с помощью Uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
-    # Здесь asyncio.run(main()) не нужен, так как Uvicorn сам управляет асинхронным циклом.
+    asyncio.run(main())
