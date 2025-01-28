@@ -3,37 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-
-    <title>Магазин</title>
-    <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Магазин доставки еды</title>
     <link rel="stylesheet" href="styles.css">
     <script>
         let cart = [];
-        let items = [
-            { id: 1, name: "Бургер", price: 150, category: "burgers", description: "Сочный говяжий бургер с соусом BBQ", img: "https://via.placeholder.com/100" },
-            { id: 2, name: "Пицца", price: 400, category: "burgers", description: "Пицца с сыром моцарелла и томатным соусом", img: "https://via.placeholder.com/100" },
-            { id: 3, name: "Кола", price: 100, category: "drinks", description: "Охлажденный газированный напиток", img: "https://via.placeholder.com/100" },
-            { id: 4, name: "Мороженое", price: 120, category: "desserts", description: "Шоколадное мороженое с орехами", img: "https://via.placeholder.com/100" }
-        ];
+        let items = [];
+        let categories = {};
 
-        function showItems(category) {
+        async function fetchMenu() {
+            try {
+                let response = await fetch('https://your-backend-url.com/menu');
+                let data = await response.json();
+                processMenuData(data);
+            } catch (error) {
+                console.error('Ошибка загрузки меню:', error);
+            }
+        }
+
+        function processMenuData(data) {
+            data.forEach(item => {
+                if (!categories[item.hierarchicalParent]) {
+                    categories[item.hierarchicalParent] = [];
+                }
+                categories[item.hierarchicalParent].push(item);
+            });
+            renderCategories();
+        }
+
+        function renderCategories() {
+            let categoriesContainer = document.querySelector(".categories");
+            categoriesContainer.innerHTML = "";
+            Object.keys(categories).forEach(categoryId => {
+                let categoryButton = document.createElement("button");
+                categoryButton.innerText = `Категория ${categoryId}`;
+                categoryButton.onclick = () => showItems(categoryId);
+                categoriesContainer.appendChild(categoryButton);
+            });
+        }
+
+        function showItems(categoryId) {
             let itemsContainer = document.getElementById("items");
             itemsContainer.innerHTML = "";
-
-            let filteredItems = items.filter(item => item.category === category);
-            filteredItems.forEach(item => {
+            categories[categoryId].forEach(item => {
                 let itemCard = document.createElement("div");
                 itemCard.className = "item-card";
                 itemCard.innerHTML = `
-                    <img src="${item.img}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+                    <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}" onclick="showItemDetails(${item.id})">
                     <h3>${item.name}</h3>
-                    <p>${item.price}₽</p>
+                    <p>${item.cost}₽</p>
                     <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
                 `;
                 itemsContainer.appendChild(itemCard);
@@ -46,9 +63,9 @@
             let modalContent = document.getElementById("modal-content");
             modalContent.innerHTML = `
                 <h2>${item.name}</h2>
-                <img src="${item.img}" alt="${item.name}">
+                <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}">
                 <p>${item.description}</p>
-                <p><strong>Цена: ${item.price}₽</strong></p>
+                <p><strong>Цена: ${item.cost}₽</strong></p>
                 <button class="add-to-cart" onclick="addToCart(${item.id}); closeModal()">Добавить в корзину</button>
             `;
             modal.style.display = "block";
@@ -79,7 +96,6 @@
             let cartModal = document.getElementById("cart-modal");
             let cartContent = document.getElementById("cart-content");
             cartContent.innerHTML = "";
-
             if (cart.length === 0) {
                 cartContent.innerHTML = "<p>Корзина пуста</p>";
             } else {
@@ -97,20 +113,6 @@
             cartModal.style.display = "block";
         }
 
-        function updateQuantity(id, quantity) {
-            let cartItem = cart.find(i => i.id === id);
-            if (cartItem) {
-                cartItem.quantity = parseInt(quantity);
-            }
-            updateCartButton();
-        }
-
-        function removeFromCart(id) {
-            cart = cart.filter(item => item.id !== id);
-            updateCartButton();
-            showCart();
-        }
-
         function placeOrder() {
             if (cart.length === 0) {
                 alert("Корзина пуста!");
@@ -120,42 +122,28 @@
             Telegram.WebApp.sendData(JSON.stringify(order));
             Telegram.WebApp.close();
         }
+
+        window.onload = fetchMenu;
     </script>
 </head>
 <body>
     <div class="container">
         <h1>🍔 Магазин доставки еды</h1>
-
-        <!-- Разделы товаров -->
-        <div class="categories">
-            <button onclick="showItems('burgers')">🍔 Бургеры</button>
-            <button onclick="showItems('drinks')">🥤 Напитки</button>
-            <button onclick="showItems('desserts')">🍰 Десерты</button>
-        </div>
-
-        <!-- Список товаров -->
+        <div class="categories"></div>
         <div id="items" class="items"></div>
-
-        <!-- Кнопка корзины -->
         <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
     </div>
 
-    <!-- Окно описания товара -->
     <div id="item-modal" class="modal">
         <div class="modal-content" id="modal-content"></div>
         <button onclick="closeModal()">Закрыть</button>
     </div>
 
-    <!-- Окно корзины -->
     <div id="cart-modal" class="modal">
         <h2>Корзина</h2>
         <div id="cart-content"></div>
         <button class="order-button" onclick="placeOrder()">✅ Оформить заказ</button>
         <button onclick="document.getElementById('cart-modal').style.display='none'">Закрыть</button>
     </div>
-</body>
-</html>
-
-    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
 </body>
 </html>
