@@ -61,8 +61,12 @@ function showItems(categoryName) {
     categories[categoryName].forEach(item => {
         let itemCard = document.createElement("div");
         itemCard.className = "item-card";
+        
+        // Проверка на наличие изображений
+        let imageSrc = item.images && item.images[0] ? `https://api.sbis.ru/retail${item.images[0]}` : 'https://via.placeholder.com/150'; // Используем заглушку, если изображение отсутствует
+        
         itemCard.innerHTML = `
-            <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+            <img src="${imageSrc}" alt="${item.name}" onclick="showItemDetails(${item.id})">
             <h3>${item.name}</h3>
             <p>${item.cost}₽</p>
             <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
@@ -70,6 +74,7 @@ function showItems(categoryName) {
         itemsContainer.appendChild(itemCard);
     });
 }
+
 
         function showItemDetails(id) {
             let item = items.find(i => i.id === id);
