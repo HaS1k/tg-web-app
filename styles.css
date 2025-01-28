@@ -27,26 +27,22 @@ h1 {
     color: #4caf50;
     margin-bottom: 20px;
 }
-
-/* Кнопки категорий */
 .categories {
     margin-bottom: 20px;
 }
 
 .categories button {
-    background-color: #4caf50;
+    padding: 10px;
+    margin: 5px;
+    background-color: #ff9900;
     color: white;
     border: none;
-    padding: 10px 15px;
-    font-size: 16px;
-    margin: 5px;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
 .categories button:hover {
-    background-color: #45a049;
+    background-color: #ff6600;
 }
 
 /* Карточки товаров */
@@ -55,35 +51,25 @@ h1 {
     flex-wrap: wrap;
     justify-content: center;
 }
-
 .item-card {
-    width: 45%;
-    margin: 10px 2.5%;
-    padding: 15px;
-    background-color: #fff;
+    border: 1px solid #ddd;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    margin: 10px;
     text-align: center;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.item-card:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: #fff;
 }
 
 .item-card img {
-    width: 100%;
-    max-height: 200px;
-    object-fit: cover;
-    border-radius: 5px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
 }
 
 .item-card h3 {
     margin: 10px 0;
-    font-size: 18px;
-    color: #333;
 }
+
 
 .item-card p {
     font-size: 16px;
@@ -91,17 +77,16 @@ h1 {
 }
 
 .add-to-cart {
-    background-color: #ff5722;
+    background-color: #28a745;
     color: white;
+    padding: 5px 10px;
     border: none;
-    padding: 10px 15px;
-    margin-top: 10px;
     border-radius: 5px;
     cursor: pointer;
 }
 
 .add-to-cart:hover {
-    background-color: #e64a19;
+    background-color: #218838;
 }
 
 /* Корзина */

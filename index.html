@@ -47,23 +47,36 @@ function processMenuData(data) {
 function renderCategories() {
     let categoriesContainer = document.querySelector(".categories");
     categoriesContainer.innerHTML = "";
+
+    // Проверка, что категория содержит товары
     Object.keys(categories).forEach(categoryName => {
-        let categoryButton = document.createElement("button");
-        categoryButton.innerText = `Категория: ${categoryName}`;
-        categoryButton.onclick = () => showItems(categoryName);
-        categoriesContainer.appendChild(categoryButton);
+        if (categories[categoryName].length > 0) { // Если в категории есть товары
+            let categoryButton = document.createElement("button");
+            categoryButton.innerText = `Категория: ${categoryName}`;
+            categoryButton.onclick = () => showItems(categoryName);
+            categoriesContainer.appendChild(categoryButton);
+        }
     });
 }
+
 
 function showItems(categoryName) {
     let itemsContainer = document.getElementById("items");
     itemsContainer.innerHTML = "";
+
+    // Проверяем, есть ли товары в выбранной категории
+    if (!categories[categoryName] || categories[categoryName].length === 0) {
+        itemsContainer.innerHTML = "<p>Товары не найдены в этой категории.</p>";
+        return;
+    }
+
+    // Отображаем товары, если они есть
     categories[categoryName].forEach(item => {
         let itemCard = document.createElement("div");
         itemCard.className = "item-card";
-        
-        // Проверка на наличие изображений
-        let imageSrc = item.images && item.images[0] ? `https://api.sbis.ru/retail${item.images[0]}` : 'https://via.placeholder.com/150'; // Используем заглушку, если изображение отсутствует
+
+        // Проверка на наличие изображения
+        let imageSrc = item.images && item.images[0] ? `https://api.sbis.ru/retail${item.images[0]}` : 'https://via.placeholder.com/150'; // Заглушка если нет изображения
         
         itemCard.innerHTML = `
             <img src="${imageSrc}" alt="${item.name}" onclick="showItemDetails(${item.id})">
