@@ -14,55 +14,61 @@
         let response = await fetch('http://localhost:8080/menu');
         let data = await response.json();
 
-        // Логируем данные, чтобы увидеть, что приходит от сервера
+        // Логируем данные, чтобы убедиться, что мы получаем объект
         console.log('Полученные данные:', data);
 
-        if (Array.isArray(data)) {
-            processMenuData(data);
+        // Проверяем, что полученные данные — это объект
+        if (typeof data === 'object' && !Array.isArray(data)) {
+            // Преобразуем объект в массив, чтобы работать с ним как с массивом
+            let categoriesArray = Object.values(data);
+            processMenuData(categoriesArray);
         } else {
-            console.error('Ошибка: полученные данные не являются массивом', data);
+            console.error('Ошибка: полученные данные не являются объектом с категориями', data);
         }
     } catch (error) {
         console.error('Ошибка загрузки меню:', error);
     }
 }
 
-
-        function processMenuData(data) {
-            data.forEach(item => {
-                if (!categories[item.hierarchicalParent]) {
-                categories[item.hierarchicalParent] = [];
-                }
-            categories[item.hierarchicalParent].push(item);
-            });
-            renderCategories();
+function processMenuData(data) {
+    data.forEach(category => {
+        if (!categories[category.name]) {
+            categories[category.name] = [];
         }
+
+        // Добавляем товары категории
+        categories[category.name].push(...category.items);
+    });
+
+    renderCategories();
+}
 
 function renderCategories() {
     let categoriesContainer = document.querySelector(".categories");
     categoriesContainer.innerHTML = "";
-    Object.keys(categories).forEach(categoryId => {
+    Object.keys(categories).forEach(categoryName => {
         let categoryButton = document.createElement("button");
-        categoryButton.innerText = `Категория ${categoryId}`;
-        categoryButton.onclick = () => showItems(categoryId);
+        categoryButton.innerText = `Категория: ${categoryName}`;
+        categoryButton.onclick = () => showItems(categoryName);
         categoriesContainer.appendChild(categoryButton);
     });
 }
-        function showItems(categoryId) {
-            let itemsContainer = document.getElementById("items");
-            itemsContainer.innerHTML = "";
-            categories[categoryId].forEach(item => {
-                let itemCard = document.createElement("div");
-                itemCard.className = "item-card";
-                itemCard.innerHTML = `
-                    <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}" onclick="showItemDetails(${item.id})">
-                    <h3>${item.name}</h3>
-                    <p>${item.cost}₽</p>
-                    <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
-                `;
-                itemsContainer.appendChild(itemCard);
-            });
-        }
+
+function showItems(categoryName) {
+    let itemsContainer = document.getElementById("items");
+    itemsContainer.innerHTML = "";
+    categories[categoryName].forEach(item => {
+        let itemCard = document.createElement("div");
+        itemCard.className = "item-card";
+        itemCard.innerHTML = `
+            <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+            <h3>${item.name}</h3>
+            <p>${item.cost}₽</p>
+            <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
+        `;
+        itemsContainer.appendChild(itemCard);
+    });
+}
 
         function showItemDetails(id) {
             let item = items.find(i => i.id === id);
