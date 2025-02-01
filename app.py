@@ -1,22 +1,19 @@
 import os
 import asyncio
 from fastapi.responses import FileResponse
-import requests
+import httpx
 import json
 from aiogram import Bot, Dispatcher, types
-from aiogram.client.bot import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.types.web_app_info import WebAppInfo
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from dotenv import find_dotenv, load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import base64
 import logging
-import httpx
 
 # Загружаем .env
 load_dotenv(find_dotenv())
@@ -32,7 +29,7 @@ menu_data = {}
 stoplist_data = {}
 
 # API-конфигурация
-API_URL="https://api.sbis.ru/retail/nomenclature/list?"
+API_URL = "https://api.sbis.ru/retail/nomenclature/list?"
 API_BASE_URL = "https://api.sbis.ru/retail"
 SBIS_TOKEN = os.getenv("SBIS_TOKEN")
 API_HEADERS = {"X-SBISAccessToken": SBIS_TOKEN}
@@ -58,6 +55,7 @@ app.add_middleware(
 # Функция получения полного URL изображения
 def get_image_url(image_param):
     return f"{API_BASE_URL}{image_param}" if image_param else "https://via.placeholder.com/150"
+
 async def fetch_menu():
     global menu_data
     logging.info("Запрос меню из СБИС...")
@@ -69,8 +67,8 @@ async def fetch_menu():
 
             if response.status_code != 200:
                 logging.error(f"Ошибка запроса: {response.text}")
-                return
-            
+                return None
+
             data = response.json().get("nomenclatures", [])
             logging.info(f"Получено {len(data)} товаров/категорий")
 
@@ -90,11 +88,10 @@ async def fetch_menu():
                 else:  # Товар
                     image_list = item.get("images")
 
-                    # Проверяем, есть ли фото
                     if image_list and isinstance(image_list, list) and len(image_list) > 0:
                         image_url = get_image_url(image_list[0])
                         logging.info(f"Загрузка изображения: {image_url}")
-                        
+
                         img_response = await client.get(image_url)
 
                         if img_response.status_code == 200:
@@ -122,10 +119,11 @@ async def fetch_menu():
 
             menu_data = categories
             logging.info("Меню успешно обновлено!")
+            return True
 
         except Exception as e:
             logging.error(f"Ошибка при загрузке меню: {e}")
-
+            return False
 
 # 📌 Команда /start
 @dp.message(CommandStart())
@@ -142,14 +140,19 @@ async def start_cmd(message: types.Message):
     )
     await message.answer(text="start", reply_markup=markup)
     await message.answer("Загрузка меню...")
-    await fetch_menu()
 
-    await message.answer("Меню обновлено! Перейдите в веб-приложение для просмотра.")
+    success = await fetch_menu()
+    if success:
+        await message.answer("Меню обновлено! Перейдите в веб-приложение для просмотра.")
+    else:
+        await message.answer("Не удалось обновить меню. Попробуйте позже.")
 
 # 🔗 API маршруты
 @app.get("/menu")
 async def get_menu():
     logging.info("Запрос на получение меню через API")
+    if not menu_data:
+        raise HTTPException(status_code=404, detail="Меню не найдено")
     return menu_data
 
 @app.get("/stoplist")
@@ -162,7 +165,7 @@ async def get_image(filename: str):
     file_path = f"images/{filename}"
     if os.path.exists(file_path):
         return FileResponse(file_path)
-    return {"error": "Файл не найден"}
+    raise HTTPException(status_code=404, detail="Файл не найден")
 
 # 🎯 Функция запуска бота
 async def on_start():
