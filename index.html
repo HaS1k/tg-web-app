@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Магазин доставки еды</title>
     <link rel="stylesheet" href="styles.css">
+    
     <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
     <script>
         let cart = [];
@@ -43,6 +44,10 @@
 
         function renderCategories() {
             let categoriesContainer = document.querySelector(".categories");
+            if (!categoriesContainer) {
+                console.error("Элемент .categories не найден в DOM");
+                return;
+            }
             categoriesContainer.innerHTML = "";
 
             for (let categoryId in categories) {
@@ -56,6 +61,10 @@
 
         function showItems(categoryId) {
             let itemsContainer = document.getElementById("items");
+            if (!itemsContainer) {
+                console.error("Элемент #items не найден в DOM");
+                return;
+            }
             itemsContainer.innerHTML = "";
 
             let category = categories[categoryId];
@@ -93,6 +102,10 @@
 
             let modal = document.getElementById("item-modal");
             let modalContent = document.getElementById("modal-content");
+            if (!modal || !modalContent) {
+                console.error("Модальное окно не найдено");
+                return;
+            }
             modalContent.innerHTML = `
                 <h2>${item.name}</h2>
                 <img src="${item.image}" alt="${item.name}">
@@ -104,7 +117,10 @@
         }
 
         function closeModal() {
-            document.getElementById("item-modal").style.display = "none";
+            let modal = document.getElementById("item-modal");
+            if (modal) {
+                modal.style.display = "none";
+            }
         }
 
         function addToCart(categoryId, itemName) {
@@ -131,13 +147,19 @@
 
         function updateCartButton() {
             let cartBtn = document.getElementById("cart-button");
-            let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            cartBtn.innerText = `🛒 Корзина (${totalItems})`;
+            if (cartBtn) {
+                let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                cartBtn.innerText = `🛒 Корзина (${totalItems})`;
+            }
         }
 
         function showCart() {
             let cartModal = document.getElementById("cart-modal");
             let cartContent = document.getElementById("cart-content");
+            if (!cartModal || !cartContent) {
+                console.error("Элементы корзины не найдены");
+                return;
+            }
             cartContent.innerHTML = "";
             if (cart.length === 0) {
                 cartContent.innerHTML = "<p>Корзина пуста</p>";
@@ -179,8 +201,30 @@
             Telegram.WebApp.close();
         }
 
-        window.onload = function () {
+        document.addEventListener("DOMContentLoaded", function () {
             console.log("Загрузка меню...");
             fetchMenu();
-        };
+        });
     </script>
+</head>
+<body>
+    <div class="container">
+        <h1>🍔 Магазин доставки еды</h1>
+        <div class="categories"></div>
+        <div id="items" class="items"></div>
+        <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
+    </div>
+
+    <div id="item-modal" class="modal">
+        <div class="modal-content" id="modal-content"></div>
+        <button onclick="closeModal()">Закрыть</button>
+    </div>
+
+    <div id="cart-modal" class="modal">
+        <h2>Корзина</h2>
+        <div id="cart-content"></div>
+        <button class="order-button" onclick="placeOrder()">✅ Оформить заказ</button>
+        <button onclick="document.getElementById('cart-modal').style.display='none'">Закрыть</button>
+    </div>
+</body>
+</html>
