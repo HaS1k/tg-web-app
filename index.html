@@ -12,23 +12,22 @@
         let categories = {};
         
         async function fetchMenu() {
-            try {
-                // Запрос к API сервера
-                let response = await fetch('https://ecward-109-126-48-7.ru.tuna.am/menu'); // Укажи реальный URL сервера
-                let data = await response.json();
-                console.log('Полученные данные:', data);
+    try {
+        let response = await fetch('https://api.telegram.org/bot7942452235:AAE7fWZ7Zr-vIkZL-GEbyumIBNMjbJq_bGQ/menu');
+        let data = await response.json();
 
-                if (typeof data === 'object' && !Array.isArray(data)) {
-                    // Преобразуем данные в нужный формат
-                    let categoriesArray = Object.entries(data).map(([key, value]) => ({ name: key, items: value }));
-                    processMenuData(categoriesArray);
-                } else {
-                    console.error('Ошибка: полученные данные не являются объектом с категориями', data);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки меню:', error);
-            }
+        console.log('Данные меню:', data); // Логируем ответ с сервера
+
+        if (typeof data === 'object' && !Array.isArray(data)) {
+            let categoriesArray = Object.entries(data).map(([key, value]) => ({ name: key, items: value }));
+            processMenuData(categoriesArray);
+        } else {
+            console.error('Ошибка: полученные данные не являются объектом с категориями', data);
         }
+    } catch (error) {
+        console.error('Ошибка загрузки меню:', error);
+    }
+}
 
         function processMenuData(data) {
             // Обрабатываем данные, группируем по категориям
