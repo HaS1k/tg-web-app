@@ -173,7 +173,7 @@ async def on_start():
 # 📌 Основной цикл работы FastAPI + бота
 async def main():
     bot_task = asyncio.create_task(on_start())
-    config = uvicorn.Config(app, host="0.0.0.0", port=8080)
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000)
     server = uvicorn.Server(config)
     server_task = asyncio.create_task(server.serve())
     await asyncio.gather(bot_task, server_task)
