@@ -1,161 +1,49 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Магазин доставки еды</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Telegram Web App</title>
     <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
-    <script src="app.js"></script>
-    <script>
-        let cart = [];
-        let categories = {};
-        
-        async function fetchMenu() {
-    try {
-        let response = await fetch('https://api.telegram.org/bot7942452235:AAE7fWZ7Zr-vIkZL-GEbyumIBNMjbJq_bGQ/menu');
-        let data = await response.json();
-
-        console.log('Данные меню:', data); // Логируем ответ с сервера
-
-        if (typeof data === 'object' && !Array.isArray(data)) {
-            let categoriesArray = Object.entries(data).map(([key, value]) => ({ name: key, items: value }));
-            processMenuData(categoriesArray);
-        } else {
-            console.error('Ошибка: полученные данные не являются объектом с категориями', data);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки меню:', error);
-    }
-}
-
-        function processMenuData(data) {
-            // Обрабатываем данные, группируем по категориям
-            data.forEach(category => {
-                categories[category.name] = category.items;
-            });
-            renderCategories();
-        }
-
-        function renderCategories() {
-            let categoriesContainer = document.querySelector(".categories");
-            categoriesContainer.innerHTML = "";
-            Object.keys(categories).forEach(categoryName => {
-                let categoryButton = document.createElement("button");
-                categoryButton.innerText = `Категория: ${categoryName}`;
-                categoryButton.onclick = () => showItems(categoryName);
-                categoriesContainer.appendChild(categoryButton);
-            });
-        }
-
-        function showItems(categoryName) {
-            let itemsContainer = document.getElementById("items");
-            itemsContainer.innerHTML = "";
-            categories[categoryName].forEach(item => {
-                let itemCard = document.createElement("div");
-                itemCard.className = "item-card";
-
-                itemCard.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" onclick="showItemDetails(${item.id})">
-                    <h3>${item.name}</h3>
-                    <p>${item.price}₽</p>
-                    <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
-                `;
-                itemsContainer.appendChild(itemCard);
-            });
-        }
-
-        function showItemDetails(id) {
-            let item = categories.flatMap(c => c.items).find(i => i.id === id);
-            let modal = document.getElementById("item-modal");
-            let modalContent = document.getElementById("modal-content");
-            modalContent.innerHTML = `
-                <h2>${item.name}</h2>
-                <img src="${item.image}" alt="${item.name}">
-                <p>${item.description || 'Нет описания'}</p>
-                <p><strong>Цена: ${item.price}₽</strong></p>
-                <button class="add-to-cart" onclick="addToCart(${item.id}); closeModal()">Добавить в корзину</button>
-            `;
-            modal.style.display = "block";
-        }
-
-        function closeModal() {
-            document.getElementById("item-modal").style.display = "none";
-        }
-
-        function addToCart(id) {
-            let item = categories.flatMap(c => c.items).find(i => i.id === id);
-            let cartItem = cart.find(i => i.id === id);
-            if (cartItem) {
-                cartItem.quantity++;
-            } else {
-                cart.push({ ...item, quantity: 1 });
-            }
-            updateCartButton();
-        }
-
-        function updateCartButton() {
-            let cartBtn = document.getElementById("cart-button");
-            let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            cartBtn.innerText = `🛒 Корзина (${totalItems})`;
-        }
-
-        function showCart() {
-            let cartModal = document.getElementById("cart-modal");
-            let cartContent = document.getElementById("cart-content");
-            cartContent.innerHTML = "";
-            if (cart.length === 0) {
-                cartContent.innerHTML = "<p>Корзина пуста</p>";
-            } else {
-                cart.forEach(item => {
-                    let cartItem = document.createElement("div");
-                    cartItem.className = "cart-item";
-                    cartItem.innerHTML = `
-                        <p>${item.name} - ${item.price}₽</p>
-                        <input type="number" min="1" value="${item.quantity}" onchange="updateQuantity(${item.id}, this.value)">
-                        <button onclick="removeFromCart(${item.id})">❌</button>
-                    `;
-                    cartContent.appendChild(cartItem);
-                });
-            }
-            cartModal.style.display = "block";
-        }
-
-        function placeOrder() {
-            if (cart.length === 0) {
-                alert("Корзина пуста!");
-                return;
-            }
-            const order = { user_id: 12345, items: cart };
-            Telegram.WebApp.sendData(JSON.stringify(order));
-            Telegram.WebApp.close();
-        }
-
-        window.onload = function () {
-            console.log("Загрузка меню...");
-            fetchMenu();  // Загружаем меню при загрузке страницы
-        };
-    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>🍔 Магазин доставки еды</h1>
-        <div class="categories"></div>
-        <div id="items" class="items"></div>
-        <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
-    </div>
+    <h1>Welcome to Telegram Web App</h1>
+    <div id="menuContainer"></div>
 
-    <div id="item-modal" class="modal">
-        <div class="modal-content" id="modal-content"></div>
-        <button onclick="closeModal()">Закрыть</button>
-    </div>
+    <script>
+        // Инициализация Web App
+        window.Telegram.WebApp.ready();
 
-    <div id="cart-modal" class="modal">
-        <h2>Корзина</h2>
-        <div id="cart-content"></div>
-        <button class="order-button" onclick="placeOrder()">✅ Оформить заказ</button>
-        <button onclick="document.getElementById('cart-modal').style.display='none'">Закрыть</button>
-    </div>
+        // Функция для извлечения параметров URL
+        function getURLParams(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Получаем переданные данные (меню) в формате JSON из URL
+        const menuData = JSON.parse(getURLParams('data'));
+
+        // Отображаем меню на странице
+        const menuContainer = document.getElementById("menuContainer");
+
+        if (menuData) {
+            const categories = Object.keys(menuData);
+            categories.forEach(category => {
+                const categoryDiv = document.createElement("div");
+                categoryDiv.innerHTML = `<h3>${menuData[category].name}</h3>`;
+                const itemsList = document.createElement("ul");
+                menuData[category].items.forEach(item => {
+                    const itemLi = document.createElement("li");
+                    itemLi.innerHTML = `<strong>${item.name}</strong><br>Price: ${item.price}<br>Description: ${item.description}`;
+                    itemsList.appendChild(itemLi);
+                });
+                categoryDiv.appendChild(itemsList);
+                menuContainer.appendChild(categoryDiv);
+            });
+        } else {
+            menuContainer.innerHTML = "Меню не найдено!";
+        }
+    </script>
 </body>
 </html>
 
