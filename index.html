@@ -8,40 +8,43 @@
 </head>
 <body>
     <h1>Welcome to Telegram Web App</h1>
-    <div id="menuContainer"></div>
+    <div id="menu"></div>
 
     <script>
         // Инициализация Web App
         window.Telegram.WebApp.ready();
 
         // Функция для извлечения параметров URL
-        function getURLParams(name) {
+        function getQueryParams() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
+            return urlParams.get('menu');
         }
 
-        // Получаем переданные данные (меню) в формате JSON из URL
-        const menuData = JSON.parse(getURLParams('data'));
+        // Декодируем JSON данные из base64
+        const encodedMenu = getQueryParams();
+        if (encodedMenu) {
+            const decodedMenu = atob(encodedMenu);
+            const menuData = JSON.parse(decodedMenu);
 
-        // Отображаем меню на странице
-        const menuContainer = document.getElementById("menuContainer");
-
-        if (menuData) {
-            const categories = Object.keys(menuData);
-            categories.forEach(category => {
-                const categoryDiv = document.createElement("div");
-                categoryDiv.innerHTML = `<h3>${menuData[category].name}</h3>`;
-                const itemsList = document.createElement("ul");
-                menuData[category].items.forEach(item => {
-                    const itemLi = document.createElement("li");
-                    itemLi.innerHTML = `<strong>${item.name}</strong><br>Price: ${item.price}<br>Description: ${item.description}`;
-                    itemsList.appendChild(itemLi);
+            // Отображаем меню на странице
+            const menuContainer = document.getElementById('menu');
+            menuData.forEach(category => {
+                const categoryElement = document.createElement('div');
+                categoryElement.innerHTML = `<h2>${category.name}</h2>`;
+                category.items.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.innerHTML = `
+                        <h3>${item.name}</h3>
+                        <p>${item.description}</p>
+                        <p>Price: ${item.price}</p>
+                        <img src="${item.image}" alt="${item.name}">
+                    `;
+                    categoryElement.appendChild(itemElement);
                 });
-                categoryDiv.appendChild(itemsList);
-                menuContainer.appendChild(categoryDiv);
+                menuContainer.appendChild(categoryElement);
             });
         } else {
-            menuContainer.innerHTML = "Меню не найдено!";
+            document.getElementById('menu').innerHTML = 'No menu data available.';
         }
     </script>
 </body>
