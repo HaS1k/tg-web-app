@@ -184,25 +184,3 @@
             fetchMenu();
         };
     </script>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🍔 Магазин доставки еды</h1>
-            <div class="categories"></div>
-            <div id="items" class="items"></div>
-            <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
-        </div>
-    
-        <div id="item-modal" class="modal">
-            <div class="modal-content" id="modal-content"></div>
-            <button onclick="closeModal()">Закрыть</button>
-        </div>
-    
-        <div id="cart-modal" class="modal">
-            <h2>Корзина</h2>
-            <div id="cart-content"></div>
-            <button class="order-button" onclick="placeOrder()">✅ Оформить заказ</button>
-            <button onclick="document.getElementById('cart-modal').style.display='none'">Закрыть</button>
-        </div>
-    </body>
-    </html>
