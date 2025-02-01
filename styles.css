@@ -1,222 +1,99 @@
-/* Общие стили */
-* {
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
-
-body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
-    padding: 10px;
-    max-width: 100%;
-}
-
-/* Контейнер */
 .container {
-    width: 100%;
-    max-width: 480px;
+    max-width: 1200px;
     margin: 0 auto;
-    text-align: center;
+    padding: 20px;
 }
-
-/* Заголовок */
 h1 {
-    font-size: 24px;
-    color: #4caf50;
-    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
 }
 .categories {
-    margin-bottom: 20px;
-}
-
-.categories button {
-    padding: 10px;
-    margin: 5px;
-    background-color: #ff9900;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.categories button:hover {
-    background-color: #ff6600;
-}
-
-/* Карточки товаров */
-.items {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.categories button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.categories button:hover {
+    background-color: #0056b3;
+}
+.items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
 }
 .item-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    margin: 10px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     text-align: center;
-    background-color: #fff;
 }
-
 .item-card img {
     max-width: 100%;
-    height: auto;
-    border-radius: 8px;
+    border-radius: 10px;
 }
-
 .item-card h3 {
     margin: 10px 0;
+    font-size: 18px;
 }
-
-
 .item-card p {
-    font-size: 16px;
-    color: #666;
+    margin: 5px 0;
+    color: #555;
 }
-
-.add-to-cart {
+.item-card button {
+    padding: 5px 10px;
     background-color: #28a745;
     color: white;
-    padding: 5px 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
 }
-
-.add-to-cart:hover {
+.item-card button:hover {
     background-color: #218838;
 }
-
-/* Корзина */
-.cart-button {
-    background-color: #3f51b5;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 18px;
-    border-radius: 5px;
-    margin-top: 20px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.cart-button:hover {
-    background-color: #303f9f;
-}
-
-/* Модальные окна */
 .modal {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    display: none;
-    align-items: center;
     justify-content: center;
-    z-index: 100;
+    align-items: center;
 }
-
 .modal-content {
     background-color: white;
     padding: 20px;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 400px;
-    text-align: center;
-}
-
-.modal img {
+    border-radius: 10px;
+    max-width: 500px;
     width: 100%;
-    max-height: 200px;
-    object-fit: cover;
-    border-radius: 5px;
-    margin: 10px 0;
 }
-
-button {
+.cart-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
     padding: 10px 20px;
-    margin-top: 10px;
-    background-color: #4caf50;
+    background-color: #007bff;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
 }
-
-button:hover {
-    background-color: #45a049;
-}
-
-/* Корзина (модальное окно) */
-#cart-content .cart-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-#cart-content .cart-item p {
-    flex-grow: 1;
-    font-size: 16px;
-}
-
-#cart-content .cart-item input {
-    width: 40px;
-    margin-right: 10px;
-}
-
-#cart-content .cart-item button {
-    background-color: #ff5722;
-    padding: 5px 10px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-#cart-content .cart-item button:hover {
-    background-color: #e64a19;
-}
-
-.order-button {
-    background-color: #4caf50;
-    font-size: 16px;
-    margin-top: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-}
-
-.order-button:hover {
-    background-color: #45a049;
-}
-
-/* Отступы и мобильные стили */
-@media (max-width: 480px) {
-    .item-card {
-        width: 100%;
-    }
-
-    h1 {
-        font-size: 20px;
-    }
-
-    .categories button {
-        font-size: 14px;
-        padding: 8px 12px;
-    }
-
-    .cart-button {
-        font-size: 16px;
-    }
-
-    .modal-content {
-        width: 90%;
-        padding: 15px;
-    }
-
-    button {
-        font-size: 14px;
-    }
+.cart-button:hover {
+    background-color: #0056b3;
 }
