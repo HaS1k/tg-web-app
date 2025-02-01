@@ -102,7 +102,7 @@
             cart.forEach(item => {
                 let cartItem = document.createElement("div");
                 cartItem.className = "cart-item";
-                cartItem.innerHTML = `
+                cartItem.innerHTML = ` 
                     <p>${item.name} - ${item.price}₽</p>
                     <input type="number" min="1" value="${item.quantity}" onchange="updateQuantity('${item.name}', this.value)">
                     <button onclick="removeFromCart('${item.name}')">❌</button>
@@ -145,14 +145,16 @@
             }
 
             const order = {
-                user_id: 12345,
                 user_name: userName,
                 address: userAddress,
                 phone: userPhone,
                 items: cart
             };
 
+            // Отправка данных в Telegram
             Telegram.WebApp.sendData(JSON.stringify(order));
+
+            // Закрытие WebApp после оформления заказа
             Telegram.WebApp.close();
         }
 
