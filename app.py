@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from dotenv import find_dotenv, load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import base64
 
 load_dotenv(find_dotenv())
 
@@ -46,23 +47,25 @@ app.add_middleware(
 menu_data = {}
 
 # Функция запроса данных из СБИС
+# Функция для получения полного URL изображения
+def get_image_url(image_param):
+    base_url = "https://api.sbis.ru/retail/img"
+    return f"{base_url}?params={image_param}"
+
 async def fetch_menu():
     global menu_data
-    print("Запрос данных из API...")
     response = requests.get(API_URL, params=API_PARAMS, headers=API_HEADERS)
-    print(f"Статус ответа: {response.status_code}")
-    
+
     if response.status_code == 200:
         data = response.json().get("nomenclatures", [])
-        print(f"Получено {len(data)} элементов")
         
         categories = {}
         items = {}
-        
+
         for item in data:
             hierarchical_id = item.get("hierarchicalId")
             parent_id = item.get("hierarchicalParent")
-            
+
             if item.get("id") is None:  # Это категория
                 categories[hierarchical_id] = {
                     "name": item.get("name"),
@@ -71,8 +74,17 @@ async def fetch_menu():
                 }
             else:  # Это товар
                 image_list = item.get("images")
-                image_url = f"https://api.sbis.ru/retail{image_list[0]}" if image_list and isinstance(image_list, list) and len(image_list) > 0 else ".jpg"
-                
+                if image_list and isinstance(image_list, list) and len(image_list) > 0:
+                    image_url = get_image_url(image_list[0])
+                    
+                    # Загружаем изображение и конвертируем в base64
+                    img_response = requests.get(image_url)
+                    if img_response.status_code == 200:
+                        img_data = base64.b64encode(img_response.content).decode("utf-8")
+                        image_url = f"data:image/jpeg;base64,{img_data}"
+                else:
+                    image_url = "https://via.placeholder.com/150"
+
                 items[hierarchical_id] = {
                     "name": item.get("name"),
                     "price": item.get("cost"),
@@ -80,17 +92,15 @@ async def fetch_menu():
                     "image": image_url,
                     "parent": parent_id
                 }
-        
-        # Связываем товары и категории
+
         for item_id, item in items.items():
             if item["parent"] in categories:
                 categories[item["parent"]]["items"].append(item)
-        
+
         menu_data = categories
-        print("Меню обновлено! JSON-данные:")
-        print(json.dumps(menu_data, indent=2, ensure_ascii=False))
-    else:
-        print("Ошибка при запросе к API СБИС:", response.text)
+
+
+
 
 @dp.message(CommandStart())
 async def start_cmd(message: types.Message):

@@ -6,22 +6,20 @@
     <title>Магазин доставки еды</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+    <script src="app.js"></script>
     <script>
         let cart = [];
         let items = [];
         let categories = {};
+        
         async function fetchMenu() {
     try {
-        let response = await fetch('http://localhost:8080/menu');
+        let response = await fetch('https://YOUR_SERVER_URL/menu'); // Укажи реальный URL сервера
         let data = await response.json();
-
-        // Логируем данные, чтобы убедиться, что мы получаем объект
         console.log('Полученные данные:', data);
 
-        // Проверяем, что полученные данные — это объект
         if (typeof data === 'object' && !Array.isArray(data)) {
-            // Преобразуем объект в массив, чтобы работать с ним как с массивом
-            let categoriesArray = Object.values(data);
+            let categoriesArray = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
             processMenuData(categoriesArray);
         } else {
             console.error('Ошибка: полученные данные не являются объектом с категориями', data);
@@ -31,50 +29,47 @@
     }
 }
 
-function processMenuData(data) {
-    data.forEach(category => {
-        if (!categories[category.name]) {
-            categories[category.name] = [];
+
+        function processMenuData(data) {
+            data.forEach(category => {
+                if (!categories[category.name]) {
+                    categories[category.name] = [];
+                }
+
+                // Добавляем товары категории
+                categories[category.name].push(...category.items);
+            });
+
+            renderCategories();
         }
 
-        // Добавляем товары категории
-        categories[category.name].push(...category.items);
-    });
+        function renderCategories() {
+            let categoriesContainer = document.querySelector(".categories");
+            categoriesContainer.innerHTML = "";
+            Object.keys(categories).forEach(categoryName => {
+                let categoryButton = document.createElement("button");
+                categoryButton.innerText = `Категория: ${categoryName}`;
+                categoryButton.onclick = () => showItems(categoryName);
+                categoriesContainer.appendChild(categoryButton);
+            });
+        }
 
-    renderCategories();
-}
-
-function renderCategories() {
-    let categoriesContainer = document.querySelector(".categories");
-    categoriesContainer.innerHTML = "";
-    Object.keys(categories).forEach(categoryName => {
-        let categoryButton = document.createElement("button");
-        categoryButton.innerText = `Категория: ${categoryName}`;
-        categoryButton.onclick = () => showItems(categoryName);
-        categoriesContainer.appendChild(categoryButton);
-    });
-}
-
-function showItems(categoryName) {
+        function showItems(categoryName) {
     let itemsContainer = document.getElementById("items");
     itemsContainer.innerHTML = "";
     categories[categoryName].forEach(item => {
         let itemCard = document.createElement("div");
         itemCard.className = "item-card";
-        
-        // Проверка на наличие изображений
-        let imageSrc = item.images && item.images[0] ? `https://api.sbis.ru/retail${item.images[0]}` : 'https://via.placeholder.com/150'; // Используем заглушку, если изображение отсутствует
-        
+
         itemCard.innerHTML = `
-            <img src="${imageSrc}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+            <img src="${item.image}" alt="${item.name}" onclick="showItemDetails(${item.id})">
             <h3>${item.name}</h3>
-            <p>${item.cost}₽</p>
+            <p>${item.price}₽</p>
             <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
         `;
         itemsContainer.appendChild(itemCard);
     });
 }
-
 
         function showItemDetails(id) {
             let item = items.find(i => i.id === id);
@@ -142,7 +137,12 @@ function showItems(categoryName) {
             Telegram.WebApp.close();
         }
 
-        window.onload = fetchMenu;
+        window.onload = function () {
+    console.log("Загрузка меню...");
+    fetchMenu();
+};
+
+
     </script>
 </head>
 <body>
@@ -166,3 +166,4 @@ function showItems(categoryName) {
     </div>
 </body>
 </html>
+
