@@ -9,37 +9,32 @@
     <script src="app.js"></script>
     <script>
         let cart = [];
-        let items = [];
         let categories = {};
         
         async function fetchMenu() {
-    try {
-        let response = await fetch('https://ecward-109-126-48-7.ru.tuna.am/menu'); // Укажи реальный URL сервера
-        let data = await response.json();
-        console.log('Полученные данные:', data);
+            try {
+                // Запрос к API сервера
+                let response = await fetch('https://ecward-109-126-48-7.ru.tuna.am/menu'); // Укажи реальный URL сервера
+                let data = await response.json();
+                console.log('Полученные данные:', data);
 
-        if (typeof data === 'object' && !Array.isArray(data)) {
-            let categoriesArray = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
-            processMenuData(categoriesArray);
-        } else {
-            console.error('Ошибка: полученные данные не являются объектом с категориями', data);
+                if (typeof data === 'object' && !Array.isArray(data)) {
+                    // Преобразуем данные в нужный формат
+                    let categoriesArray = Object.entries(data).map(([key, value]) => ({ name: key, items: value }));
+                    processMenuData(categoriesArray);
+                } else {
+                    console.error('Ошибка: полученные данные не являются объектом с категориями', data);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки меню:', error);
+            }
         }
-    } catch (error) {
-        console.error('Ошибка загрузки меню:', error);
-    }
-}
-
 
         function processMenuData(data) {
+            // Обрабатываем данные, группируем по категориям
             data.forEach(category => {
-                if (!categories[category.name]) {
-                    categories[category.name] = [];
-                }
-
-                // Добавляем товары категории
-                categories[category.name].push(...category.items);
+                categories[category.name] = category.items;
             });
-
             renderCategories();
         }
 
@@ -55,31 +50,31 @@
         }
 
         function showItems(categoryName) {
-    let itemsContainer = document.getElementById("items");
-    itemsContainer.innerHTML = "";
-    categories[categoryName].forEach(item => {
-        let itemCard = document.createElement("div");
-        itemCard.className = "item-card";
+            let itemsContainer = document.getElementById("items");
+            itemsContainer.innerHTML = "";
+            categories[categoryName].forEach(item => {
+                let itemCard = document.createElement("div");
+                itemCard.className = "item-card";
 
-        itemCard.innerHTML = `
-            <img src="${item.image}" alt="${item.name}" onclick="showItemDetails(${item.id})">
-            <h3>${item.name}</h3>
-            <p>${item.price}₽</p>
-            <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
-        `;
-        itemsContainer.appendChild(itemCard);
-    });
-}
+                itemCard.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" onclick="showItemDetails(${item.id})">
+                    <h3>${item.name}</h3>
+                    <p>${item.price}₽</p>
+                    <button class="add-to-cart" onclick="addToCart(${item.id})">Добавить</button>
+                `;
+                itemsContainer.appendChild(itemCard);
+            });
+        }
 
         function showItemDetails(id) {
-            let item = items.find(i => i.id === id);
+            let item = categories.flatMap(c => c.items).find(i => i.id === id);
             let modal = document.getElementById("item-modal");
             let modalContent = document.getElementById("modal-content");
             modalContent.innerHTML = `
                 <h2>${item.name}</h2>
-                <img src="https://api.sbis.ru/retail${item.images[0]}" alt="${item.name}">
-                <p>${item.description}</p>
-                <p><strong>Цена: ${item.cost}₽</strong></p>
+                <img src="${item.image}" alt="${item.name}">
+                <p>${item.description || 'Нет описания'}</p>
+                <p><strong>Цена: ${item.price}₽</strong></p>
                 <button class="add-to-cart" onclick="addToCart(${item.id}); closeModal()">Добавить в корзину</button>
             `;
             modal.style.display = "block";
@@ -90,7 +85,7 @@
         }
 
         function addToCart(id) {
-            let item = items.find(i => i.id === id);
+            let item = categories.flatMap(c => c.items).find(i => i.id === id);
             let cartItem = cart.find(i => i.id === id);
             if (cartItem) {
                 cartItem.quantity++;
@@ -138,11 +133,9 @@
         }
 
         window.onload = function () {
-    console.log("Загрузка меню...");
-    fetchMenu();
-};
-
-
+            console.log("Загрузка меню...");
+            fetchMenu();  // Загружаем меню при загрузке страницы
+        };
     </script>
 </head>
 <body>
