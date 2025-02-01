@@ -14,7 +14,7 @@
         
         async function fetchMenu() {
     try {
-        let response = await fetch('https://YOUR_SERVER_URL/menu'); // Укажи реальный URL сервера
+        let response = await fetch('http://0.0.0.0:8080/menu'); // Укажи реальный URL сервера
         let data = await response.json();
         console.log('Полученные данные:', data);
 
