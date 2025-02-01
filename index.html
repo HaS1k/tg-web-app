@@ -82,66 +82,18 @@
                     <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
                     <h3>${item.name}</h3>
                     <p>${item.price}₽</p>
-                    <button class="add-to-cart" onclick="addToCart('${categoryId}', '${item.name}')">Добавить</button>
+                    <button class="add-to-cart" onclick="addToCart('${item.id}', '${item.name}', ${item.price})">Добавить</button>
                 `;
                 itemsContainer.appendChild(itemCard);
             });
         }
 
-        function showItemDetails(categoryId, itemName) {
-            let category = categories[categoryId];
-            if (!category) {
-                console.error('Категория не найдена');
-                return;
-            }
-
-            let item = category.items.find(i => i.name === itemName);
-            if (!item) {
-                console.error('Товар не найден');
-                return;
-            }
-
-            let modal = document.getElementById("item-modal");
-            let modalContent = document.getElementById("modal-content");
-            if (!modal || !modalContent) {
-                console.error("Модальное окно не найдено");
-                return;
-            }
-            modalContent.innerHTML = `
-                <h2>${item.name}</h2>
-                <img src="${item.image}" alt="${item.name}">
-                <p>${item.description || 'Нет описания'}</p>
-                <p><strong>Цена: ${item.price}₽</strong></p>
-                <button class="add-to-cart" onclick="addToCart('${categoryId}', '${item.name}'); closeModal()">Добавить в корзину</button>
-            `;
-            modal.style.display = "block";
-        }
-
-        function closeModal() {
-            let modal = document.getElementById("item-modal");
-            if (modal) {
-                modal.style.display = "none";
-            }
-        }
-
-        function addToCart(categoryId, itemName) {
-            let category = categories[categoryId];
-            if (!category) {
-                console.error('Категория не найдена');
-                return;
-            }
-
-            let item = category.items.find(i => i.name === itemName);
-            if (!item) {
-                console.error('Товар не найден');
-                return;
-            }
-
-            let cartItem = cart.find(i => i.name === itemName);
+        function addToCart(itemId, itemName, itemPrice) {
+            let cartItem = cart.find(i => i.id === itemId);
             if (cartItem) {
                 cartItem.quantity++;
             } else {
-                cart.push({ ...item, quantity: 1 });
+                cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1 });
             }
             updateCartButton();
         }
@@ -155,19 +107,16 @@
         }
 
         function showCart() {
-            // Скрываем основной контент
             let mainContent = document.getElementById("main-content");
             if (mainContent) {
                 mainContent.style.display = "none";
             }
 
-            // Показываем корзину
             let cartContent = document.getElementById("cart-content");
             if (cartContent) {
                 cartContent.style.display = "block";
             }
 
-            // Отрисовываем товары в корзине
             let cartItemsContainer = document.getElementById("cart-items");
             if (cartItemsContainer) {
                 cartItemsContainer.innerHTML = "";
@@ -179,7 +128,7 @@
                         cartItem.className = "cart-item";
                         cartItem.innerHTML = `
                             <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
-                            <button onclick="removeFromCart('${item.name}')">❌</button>
+                            <button onclick="removeFromCart('${item.id}')">❌</button>
                         `;
                         cartItemsContainer.appendChild(cartItem);
                     });
@@ -188,13 +137,11 @@
         }
 
         function showOrderForm() {
-            // Скрываем корзину
             let cartContent = document.getElementById("cart-content");
             if (cartContent) {
                 cartContent.style.display = "none";
             }
 
-            // Показываем форму для оформления заказа
             let orderForm = document.getElementById("order-form");
             if (orderForm) {
                 orderForm.style.display = "block";
@@ -202,7 +149,6 @@
         }
 
         function submitOrder() {
-            // Собираем данные из формы
             let name = document.getElementById("name").value;
             let phone = document.getElementById("phone").value;
             let street = document.getElementById("street").value;
@@ -212,16 +158,14 @@
             let apartment = document.getElementById("apartment").value;
             let intercom = document.getElementById("intercom").value;
 
-            // Проверяем, что все поля заполнены
             if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom) {
                 alert("Пожалуйста, заполните все поля!");
                 return;
             }
 
-            // Формируем объект заказа
             const order = {
                 user_id: tg.initDataUnsafe.user?.id || "unknown",
-                items: cart,
+                items: cart.map(item => ({ id: item.id, price: item.price, quantity: item.quantity })),
                 delivery_info: {
                     name,
                     phone,
@@ -234,15 +178,14 @@
                 }
             };
 
-            // Отправляем данные в Telegram
             tg.sendData(JSON.stringify(order));
-            tg.close(); // Закрываем Mini App после отправки данных
+            tg.close();
         }
 
-        function removeFromCart(itemName) {
-            cart = cart.filter(i => i.name !== itemName);
+        function removeFromCart(itemId) {
+            cart = cart.filter(i => i.id !== itemId);
             updateCartButton();
-            showCart(); // Обновляем отображение корзины
+            showCart();
         }
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -253,7 +196,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Основной контент -->
         <div id="main-content">
             <h1>🍔 Магазин доставки еды</h1>
             <div class="categories"></div>
@@ -261,7 +203,6 @@
             <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
         </div>
 
-        <!-- Корзина -->
         <div id="cart-content" style="display: none;">
             <h2>Корзина</h2>
             <div id="cart-items"></div>
@@ -269,7 +210,6 @@
             <button onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">Вернуться к меню</button>
         </div>
 
-        <!-- Форма для оформления заказа -->
         <div id="order-form" style="display: none;">
             <h2>Оформление заказа</h2>
             <form onsubmit="event.preventDefault(); submitOrder();">
@@ -301,12 +241,6 @@
                 <button type="button" onclick="document.getElementById('cart-content').style.display='block'; document.getElementById('order-form').style.display='none'">Вернуться к корзине</button>
             </form>
         </div>
-    </div>
-
-    <!-- Модальное окно для деталей товара -->
-    <div id="item-modal" class="modal">
-        <div class="modal-content" id="modal-content"></div>
-        <button onclick="closeModal()">Закрыть</button>
     </div>
 </body>
 </html>

@@ -56,7 +56,6 @@ app.add_middleware(
 def get_image_url(image_param):
     return f"{API_BASE_URL}{image_param}" if image_param else "https://via.placeholder.com/150"
 
-# 📌 Функция загрузки меню
 async def fetch_menu():
     global menu_data
     logging.info("Запрос меню из СБИС...")
@@ -87,29 +86,11 @@ async def fetch_menu():
                         "items": [],
                     }
                 else:  # Товар
-                    image_list = item.get("images")
-
-                    if image_list and isinstance(image_list, list) and len(image_list) > 0:
-                        image_url = get_image_url(image_list[0])
-                        logging.info(f"Загрузка изображения: {image_url}")
-
-                        img_response = await client.get(image_url)
-
-                        if img_response.status_code == 200:
-                            img_data = base64.b64encode(img_response.content).decode("utf-8")
-                            image_url = f"data:image/jpeg;base64,{img_data}"
-                        else:
-                            logging.warning(f"Не удалось загрузить изображение {image_url}, код {img_response.status_code}")
-                            image_url = "https://via.placeholder.com/150"
-                    else:
-                        logging.info(f"Нет изображения для товара {item.get('name')}")
-                        image_url = "https://via.placeholder.com/150"
-
                     items[hierarchical_id] = {
+                        "id": item.get("id"),  # Добавляем ID товара
                         "name": item.get("name"),
                         "price": item.get("cost"),
                         "description": item.get("description"),
-                        "image": image_url,
                         "parent": parent_id,
                     }
 
@@ -133,40 +114,48 @@ async def start_cmd(message: types.Message):
         keyboard=[
             [
                 KeyboardButton(
-                    text="🛍 Открыть магазин",
+                    text="open",
                     web_app=WebAppInfo(url="https://storied-souffle-8bb402.netlify.app/"),
                 )
             ]
-        ],
-        resize_keyboard=True
+        ]
     )
-    await message.answer("👋 Привет! Добро пожаловать в наш магазин!", reply_markup=markup)
-    await message.answer("🔄 Загружаем меню...")
+    await message.answer(text="start", reply_markup=markup)
+    await message.answer("Загрузка меню...")
 
     success = await fetch_menu()
     if success:
-        await message.answer("✅ Меню обновлено! Перейдите в веб-приложение для просмотра.")
+        await message.answer("Меню обновлено! Перейдите в веб-приложение для просмотра.")
     else:
-        await message.answer("⚠️ Не удалось обновить меню. Попробуйте позже.")
+        await message.answer("Не удалось обновить меню. Попробуйте позже.")
 
-# 📦 Обработчик заказа
+# Обработчик данных из Mini App
 @dp.message()
-async def process_order(message: types.Message):
+async def handle_web_app_data(message: types.Message):
     try:
-        order_data = json.loads(message.text)  # Получаем JSON из сообщения
-        logging.info(f"Обработан заказ: {order_data}")
+        data = json.loads(message.web_app_data.data)
+        user_id = data.get("user_id")
+        items = data.get("items")
+        delivery_info = data.get("delivery_info")
 
-        # Отправка заказа в API
-        async with httpx.AsyncClient() as client:
-            response = await client.post("http://127.0.0.1:8000/order", json=order_data)
-        
-        if response.status_code == 200:
-            await message.answer("✅ Ваш заказ принят! Спасибо за покупку.")
-        else:
-            await message.answer("⚠️ Ошибка при обработке заказа. Попробуйте позже.")
-    
-    except json.JSONDecodeError:
-        await message.answer("❌ Ошибка! Некорректный формат данных.")
+        # Формируем ответное сообщение
+        response_message = (
+            f"Ваш заказ оформлен!\n\n"
+            f"Детали доставки:\n"
+            f"Имя: {delivery_info['name']}\n"
+            f"Телефон: {delivery_info['phone']}\n"
+            f"Адрес: {delivery_info['street']}, дом {delivery_info['house']}, кв {delivery_info['apartment']}\n\n"
+            f"Товары:\n"
+        )
+
+        for item in items:
+            response_message += f"{item['name']} - {item['price']}₽ x {item['quantity']}\n"
+
+        await message.answer(response_message)
+
+    except Exception as e:
+        logging.error(f"Ошибка обработки данных: {e}")
+        await message.answer("Произошла ошибка при обработке вашего заказа.")
 
 # 🔗 API маршруты
 @app.get("/menu")
@@ -175,19 +164,6 @@ async def get_menu():
     if not menu_data:
         raise HTTPException(status_code=404, detail="Меню не найдено")
     return menu_data
-
-@app.post("/order")
-async def receive_order(order_data: dict):
-    """
-    Обработчик для получения заказа из бота.
-    Ожидает данные в JSON-формате и логирует их.
-    """
-    try:
-        logging.info(f"📦 Получен заказ: {json.dumps(order_data, indent=4, ensure_ascii=False)}")
-        return {"status": "success", "message": "Заказ принят"}
-    except Exception as e:
-        logging.error(f"❌ Ошибка обработки заказа: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка обработки заказа")
 
 @app.get("/stoplist")
 async def get_stoplist():
@@ -203,7 +179,7 @@ async def get_image(filename: str):
 
 # 🎯 Функция запуска бота
 async def on_start():
-    logging.info("🤖 Бот запущен!")
+    logging.info("Бот запущен!")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
