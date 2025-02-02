@@ -140,6 +140,7 @@
         cart.push({ externalId: itemExternalId, name: itemName, price: itemPrice, quantity: 1 });
       }
       updateCartButton();
+      // Сохраняем корзину сразу, чтобы данные были актуальны до подтверждения заказа
       saveCart();
     }
 
@@ -190,8 +191,13 @@
       loadOrderFormData();
     }
 
-    // При отправке заказа товары передаются с externalId
+    // При нажатии кнопки "Подтвердить заказ" сохраняем данные и отправляем их в бота,
+    // а затем очищаем сохранённые данные
     function submitOrder() {
+      // Сохраняем данные формы и корзины непосредственно перед отправкой
+      saveOrderFormData();
+      saveCart();
+
       const name = document.getElementById("name").value;
       const phone = document.getElementById("phone").value;
       const street = document.getElementById("street").value;
@@ -222,7 +228,13 @@
         },
       };
 
+      // Отправляем данные заказа боту
       tg.sendData(JSON.stringify(order));
+      
+      // После отправки очищаем сохранённые данные
+      localStorage.removeItem("cartData");
+      localStorage.removeItem("orderFormData");
+      
       tg.close();
     }
 
@@ -265,28 +277,28 @@
       <h2>Оформление заказа</h2>
       <form onsubmit="event.preventDefault(); submitOrder();">
         <label for="name">Имя:</label>
-        <input type="text" id="name" required oninput="saveOrderFormData()" />
+        <input type="text" id="name" required />
 
         <label for="phone">Номер телефона:</label>
-        <input type="tel" id="phone" required oninput="saveOrderFormData()" />
+        <input type="tel" id="phone" required />
 
         <label for="street">Улица:</label>
-        <input type="text" id="street" required oninput="saveOrderFormData()" />
+        <input type="text" id="street" required />
 
         <label for="house">Номер дома:</label>
-        <input type="text" id="house" required oninput="saveOrderFormData()" />
+        <input type="text" id="house" required />
 
         <label for="entrance">Подъезд:</label>
-        <input type="text" id="entrance" required oninput="saveOrderFormData()" />
+        <input type="text" id="entrance" required />
 
         <label for="floor">Этаж:</label>
-        <input type="text" id="floor" required oninput="saveOrderFormData()" />
+        <input type="text" id="floor" required />
 
         <label for="apartment">Номер квартиры:</label>
-        <input type="text" id="apartment" required oninput="saveOrderFormData()" />
+        <input type="text" id="apartment" required />
 
         <label for="intercom">Код домофона:</label>
-        <input type="text" id="intercom" required oninput="saveOrderFormData()" />
+        <input type="text" id="intercom" required />
 
         <button type="submit" class="confirm-button">Подтвердить заказ</button>
         <button type="button" onclick="backToCart()">Вернуться к корзине</button>
@@ -295,4 +307,5 @@
   </div>
 </body>
 </html>
+
 
