@@ -24,7 +24,7 @@ load_dotenv(find_dotenv())
 # Настраиваем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Переменные
+# Переменные бота и приложения
 bot = Bot(token=os.getenv("TOKEN"))
 dp = Dispatcher()
 app = FastAPI()
@@ -62,11 +62,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Функция получения полного URL изображения
 def get_image_url(image_param):
+    """Возвращает полный URL изображения или placeholder."""
     return f"{API_BASE_URL}{image_param}" if image_param else "https://via.placeholder.com/150"
 
 async def fetch_menu():
+    """Получает меню из API Saby и формирует словарь категорий и товаров."""
     global menu_data
     logging.info("Запрос меню из СБИС...")
 
@@ -89,21 +90,19 @@ async def fetch_menu():
                 hierarchical_id = item.get("hierarchicalId")
                 parent_id = item.get("hierarchicalParent")
 
-                if item.get("id") is None:  # Категория
+                if item.get("id") is None:  # Это категория
                     categories[hierarchical_id] = {
                         "name": item.get("name"),
                         "subcategories": [],
                         "items": [],
                     }
-                else:  # Товар
+                else:  # Это товар
                     image_list = item.get("images")
-
                     if image_list and isinstance(image_list, list) and len(image_list) > 0:
                         image_url = get_image_url(image_list[0])
                         logging.info(f"Загрузка изображения: {image_url}")
 
                         img_response = await client.get(image_url)
-
                         if img_response.status_code == 200:
                             img_data = base64.b64encode(img_response.content).decode("utf-8")
                             image_url = f"data:image/jpeg;base64,{img_data}"
@@ -114,9 +113,9 @@ async def fetch_menu():
                         logging.info(f"Нет изображения для товара {item.get('name')}")
                         image_url = "https://via.placeholder.com/150"
 
-                    # Сохраняем не только id, но и externalId (если API его возвращает)
+                    # Сохраняем полученные данные, включая externalId, если он есть
                     items[hierarchical_id] = {
-                        "externalId": item.get("externalId"),  # новое поле
+                        "externalId": item.get("externalId"),
                         "id": item.get("id"),
                         "name": item.get("name"),
                         "price": item.get("cost"),
@@ -125,7 +124,7 @@ async def fetch_menu():
                         "parent": parent_id,
                     }
 
-            # Связываем категории и товары
+            # Привязываем товары к категориям
             for item_id, item in items.items():
                 if item["parent"] in categories:
                     categories[item["parent"]]["items"].append(item)
@@ -138,8 +137,8 @@ async def fetch_menu():
             logging.error(f"Ошибка при загрузке меню: {e}")
             return False
 
-# Функция формирования стартовой клавиатуры (как после /start)
 def get_start_reply_markup():
+    """Возвращает стартовую клавиатуру для команды /start."""
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(
             text="open",
@@ -148,24 +147,21 @@ def get_start_reply_markup():
         resize_keyboard=True
     )
 
-# 📌 Команда /start
 @dp.message(CommandStart())
 async def start_cmd(message: types.Message):
     markup = get_start_reply_markup()
     await message.answer(text="start", reply_markup=markup)
     await message.answer("Загрузка меню...")
-
     success = await fetch_menu()
     if success:
         await message.answer("Меню обновлено! Перейдите в веб-приложение для просмотра.")
     else:
         await message.answer("Не удалось обновить меню. Попробуйте позже.")
 
-# Обработчик данных из Mini App
 @dp.message()
 async def handle_web_app_data(message: types.Message):
+    """Обрабатывает данные, полученные из Mini App (заказ пользователя)."""
     try:
-        # Получаем данные из Mini App
         data = json.loads(message.web_app_data.data)
         user_id = data.get("user_id", "unknown")
         items = data.get("items", [])
@@ -175,7 +171,7 @@ async def handle_web_app_data(message: types.Message):
         logging.info(f"Товары: {items}")
         logging.info(f"Детали доставки: {delivery_info}")
 
-        # Сохраняем данные заказа для данного пользователя
+        # Сохраняем данные заказа для пользователя
         orders_pending[message.from_user.id] = data
 
         response_message = (
@@ -186,12 +182,12 @@ async def handle_web_app_data(message: types.Message):
             f"Адрес: {delivery_info.get('street', 'Не указана')}, д. {delivery_info.get('house', 'Не указан')}, кв. {delivery_info.get('apartment', 'Не указана')}\n\n"
             f"Товары:\n"
         )
-
         for item in items:
             response_message += f"Товар: {item.get('name', 'Не указан')} - {item.get('price', 0)}₽ x {item.get('quantity', 0)}\n"
 
         await message.answer(response_message)
 
+        # Кодирование данных заказа для передачи в веб-приложение (редактирование)
         order_json = json.dumps(data)
         order_encoded = base64.urlsafe_b64encode(order_json.encode()).decode()
 
@@ -203,16 +199,15 @@ async def handle_web_app_data(message: types.Message):
             )],
             [InlineKeyboardButton(text="Отменить заказ", callback_data="cancel_order")]
         ])
-
         await message.answer("Выберите действие:", reply_markup=inline_kb)
 
     except Exception as e:
         logging.error(f"Ошибка обработки данных: {e}")
         await message.answer("Произошла ошибка при обработке вашего заказа.")
 
-# Обработчик callback-запросов для кнопки "Подтвердить заказ"
 @dp.callback_query(lambda c: c.data == "confirm_order")
 async def process_confirm_order(callback_query: types.CallbackQuery):
+    """Формирует и отправляет запрос создания заказа в Saby Retail."""
     user_id = callback_query.from_user.id
     order_data = orders_pending.get(user_id)
     if not order_data:
@@ -224,9 +219,9 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
 
     nomenclatures = []
     for item in items:
-        # Используем externalId вместо id для заказа
+        # Используем externalId, если оно есть, иначе fallback на id
         nomenclatures.append({
-            "externalId": item.get("externalId"),
+            "externalId": item.get("externalId") or item.get("id"),
             "priceListId": PRICE_LIST_ID,
             "count": item.get("quantity", 1),
             "cost": item.get("price")
@@ -253,7 +248,7 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
         "pointId": POINT_ID,
         "comment": "тестовый заказ на доставку",
         "customer": {
-            "externalId": None,
+            "externalId": delivery_info.get("externalCustomerId") or None,
             "name": delivery_info.get("name", ""),
             "lastname": "",
             "patronymic": "",
@@ -271,7 +266,6 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
         }
     }
 
-    # Отправляем запрос к API Saby Retail
     async with httpx.AsyncClient() as client:
         headers = {
             "Content-Type": "application/json",
@@ -298,14 +292,12 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
     )
     await callback_query.answer("Запрос отправлен!", show_alert=True)
 
-# Обработчик callback-запросов для кнопки "Отменить заказ"
 @dp.callback_query(lambda c: c.data == "cancel_order")
 async def process_cancel_order(callback_query: types.CallbackQuery):
     await callback_query.answer("Заказ отменен", show_alert=True)
     markup = get_start_reply_markup()
     await callback_query.message.answer("Заказ отменен. Возвращаем в начальное состояние.", reply_markup=markup)
 
-# 🔗 API маршруты
 @app.get("/menu")
 async def get_menu():
     logging.info("Запрос на получение меню через API")
@@ -325,13 +317,11 @@ async def get_image(filename: str):
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="Файл не найден")
 
-# 🎯 Функция запуска бота
 async def on_start():
     logging.info("Бот запущен!")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
-# 📌 Основной цикл работы FastAPI + бота
 async def main():
     bot_task = asyncio.create_task(on_start())
     config = uvicorn.Config(app, host="127.0.0.1", port=8000)
@@ -339,7 +329,6 @@ async def main():
     server_task = asyncio.create_task(server.serve())
     await asyncio.gather(bot_task, server_task)
 
-# 🔥 Запуск
 if __name__ == "__main__":
     try:
         asyncio.run(main())
@@ -347,4 +336,3 @@ if __name__ == "__main__":
         logging.info("Выключение сервера...")
     except Exception as e:
         logging.error(f"Критическая ошибка: {e}")
-

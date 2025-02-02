@@ -131,7 +131,7 @@
       });
     }
 
-    // Функция addToCart теперь сохраняет внешний идентификатор товара как externalId
+    // Функция addToCart сохраняет externalId товара
     function addToCart(itemExternalId, itemName, itemPrice) {
       let cartItem = cart.find((i) => i.externalId === itemExternalId);
       if (cartItem) {
@@ -190,7 +190,7 @@
       loadOrderFormData();
     }
 
-    // При отправке заказа формируем объект, где товары передаются с externalId
+    // При отправке заказа товары передаются с externalId
     function submitOrder() {
       const name = document.getElementById("name").value;
       const phone = document.getElementById("phone").value;
@@ -208,7 +208,7 @@
 
       const order = {
         user_id: tg.initDataUnsafe.user?.id || "unknown",
-        // Здесь вместо id передаём externalId для каждого товара
+        // Передаём товары с externalId
         items: cart.map((item) => ({ externalId: item.externalId, price: item.price, quantity: item.quantity })),
         delivery_info: {
           name,
@@ -226,13 +226,11 @@
       tg.close();
     }
 
-    // Если пользователь нажимает кнопку "Вернуться к корзине" из формы заказа
     function backToCart() {
       document.getElementById("order-form").style.display = "none";
       document.getElementById("cart-content").style.display = "block";
     }
 
-    // Вспомогательная функция (если требуется) для показа деталей товара
     function showItemDetails(categoryId, itemName) {
       alert(`Детали товара: ${itemName}`);
     }
@@ -258,7 +256,9 @@
       <h2>Корзина</h2>
       <div id="cart-items"></div>
       <button class="order-button" onclick="showOrderForm()">✅ Оформить заказ</button>
-      <button onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">Вернуться к меню</button>
+      <button onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">
+        Вернуться к меню
+      </button>
     </div>
 
     <div id="order-form" style="display: none;">
@@ -295,3 +295,4 @@
   </div>
 </body>
 </html>
+
