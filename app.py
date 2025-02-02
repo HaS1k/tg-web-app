@@ -1,19 +1,21 @@
 import os
 import asyncio
-from fastapi.responses import FileResponse
-import httpx
+import base64
 import json
+import logging
+
+import httpx
+import uvicorn
+from dotenv import find_dotenv, load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types.web_app_info import WebAppInfo
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from fastapi import FastAPI, HTTPException
-from dotenv import find_dotenv, load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import base64
-import logging
 
 # Загружаем .env
 load_dotenv(find_dotenv())
@@ -86,11 +88,30 @@ async def fetch_menu():
                         "items": [],
                     }
                 else:  # Товар
+                    image_list = item.get("images")
+
+                    if image_list and isinstance(image_list, list) and len(image_list) > 0:
+                        image_url = get_image_url(image_list[0])
+                        logging.info(f"Загрузка изображения: {image_url}")
+
+                        img_response = await client.get(image_url)
+
+                        if img_response.status_code == 200:
+                            img_data = base64.b64encode(img_response.content).decode("utf-8")
+                            image_url = f"data:image/jpeg;base64,{img_data}"
+                        else:
+                            logging.warning(f"Не удалось загрузить изображение {image_url}, код {img_response.status_code}")
+                            image_url = "https://via.placeholder.com/150"
+                    else:
+                        logging.info(f"Нет изображения для товара {item.get('name')}")
+                        image_url = "https://via.placeholder.com/150"
+
                     items[hierarchical_id] = {
                         "id": item.get("id"),  # Добавляем ID товара
                         "name": item.get("name"),
                         "price": item.get("cost"),
                         "description": item.get("description"),
+                        "image": image_url,
                         "parent": parent_id,
                     }
 
@@ -107,19 +128,22 @@ async def fetch_menu():
             logging.error(f"Ошибка при загрузке меню: {e}")
             return False
 
+# Функция формирования стартовой клавиатуры (как после /start)
+def get_start_reply_markup():
+    return ReplyKeyboardMarkup(
+        keyboard=[[
+            KeyboardButton(
+                text="open",
+                web_app=WebAppInfo(url="https://storied-souffle-8bb402.netlify.app/"),
+            )
+        ]],
+        resize_keyboard=True
+    )
+
 # 📌 Команда /start
 @dp.message(CommandStart())
 async def start_cmd(message: types.Message):
-    markup = ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(
-                    text="open",
-                    web_app=WebAppInfo(url="https://storied-souffle-8bb402.netlify.app/"),
-                )
-            ]
-        ]
-    )
+    markup = get_start_reply_markup()
     await message.answer(text="start", reply_markup=markup)
     await message.answer("Загрузка меню...")
 
@@ -133,29 +157,69 @@ async def start_cmd(message: types.Message):
 @dp.message()
 async def handle_web_app_data(message: types.Message):
     try:
+        # Получаем данные из Mini App
         data = json.loads(message.web_app_data.data)
-        user_id = data.get("user_id")
-        items = data.get("items")
-        delivery_info = data.get("delivery_info")
+        user_id = data.get("user_id", "unknown")  # Если user_id отсутствует, используем "unknown"
+        items = data.get("items", [])  # Если items отсутствует, используем пустой список
+        delivery_info = data.get("delivery_info", {})  # Если delivery_info отсутствует, используем пустой словарь
+
+        # Логируем полученные данные
+        logging.info(f"Получены данные от пользователя {user_id}:")
+        logging.info(f"Товары: {items}")
+        logging.info(f"Детали доставки: {delivery_info}")
 
         # Формируем ответное сообщение
         response_message = (
             f"Ваш заказ оформлен!\n\n"
             f"Детали доставки:\n"
-            f"Имя: {delivery_info['name']}\n"
-            f"Телефон: {delivery_info['phone']}\n"
-            f"Адрес: {delivery_info['street']}, дом {delivery_info['house']}, кв {delivery_info['apartment']}\n\n"
+            f"Имя: {delivery_info.get('name', 'Не указано')}\n"
+            f"Телефон: {delivery_info.get('phone', 'Не указан')}\n"
+            f"Адрес: {delivery_info.get('street', 'Не указана')}, дом {delivery_info.get('house', 'Не указан')}, кв {delivery_info.get('apartment', 'Не указана')}\n\n"
             f"Товары:\n"
         )
 
+        # Добавляем информацию о товарах
         for item in items:
-            response_message += f"{item['name']} - {item['price']}₽ x {item['quantity']}\n"
+            response_message += f"Товар ID: {item.get('id', 'Не указан')} - {item.get('price', 0)}₽ x {item.get('quantity', 0)}\n"
 
+        # Отправляем ответное сообщение пользователю
         await message.answer(response_message)
+
+        # Подготавливаем данные заказа для передачи в веб-приложение при редактировании
+        order_json = json.dumps(data)
+        order_encoded = base64.urlsafe_b64encode(order_json.encode()).decode()
+
+        # Формируем инлайн-клавиатуру с 3 кнопками
+        inline_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Подтвердить заказ", callback_data="confirm_order")],
+            [InlineKeyboardButton(
+                text="Редактировать заказ",
+                # Передаём закодированные данные заказа в параметре order_data
+                web_app=WebAppInfo(url=f"https://storied-souffle-8bb402.netlify.app/?order_data={order_encoded}")
+            )],
+            [InlineKeyboardButton(text="Отменить заказ", callback_data="cancel_order")]
+        ])
+
+        await message.answer("Выберите действие:", reply_markup=inline_kb)
 
     except Exception as e:
         logging.error(f"Ошибка обработки данных: {e}")
         await message.answer("Произошла ошибка при обработке вашего заказа.")
+
+# Обработчик callback-запросов для кнопки "Подтвердить заказ"
+@dp.callback_query(lambda c: c.data == "confirm_order")
+async def process_confirm_order(callback_query: types.CallbackQuery):
+    await callback_query.answer("Заказ подтвержден!", show_alert=True)
+    # Здесь можно добавить дальнейшую логику подтверждения заказа
+
+# Обработчик callback-запросов для кнопки "Отменить заказ"
+@dp.callback_query(lambda c: c.data == "cancel_order")
+async def process_cancel_order(callback_query: types.CallbackQuery):
+    await callback_query.answer("Заказ отменен", show_alert=True)
+    # "Сбрасываем" состояние бота и возвращаем стартовую клавиатуру
+    markup = get_start_reply_markup()
+    await callback_query.message.answer("Заказ отменен. Возвращаем в начальное состояние.", reply_markup=markup)
+    # При необходимости можно также перезагрузить меню или выполнить дополнительные действия
 
 # 🔗 API маршруты
 @app.get("/menu")

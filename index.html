@@ -1,246 +1,293 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Магазин доставки еды</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
-    <script>
-        let cart = [];
-        let categories = {};
-        let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем Mini App на весь экран
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Магазин доставки еды</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+  <script>
+    let cart = [];
+    let categories = {};
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачиваем Mini App на весь экран
 
-        async function fetchMenu() {
-            try {
-                let response = await fetch('http://127.0.0.1:8000/menu');
-                let data = await response.json();
+    // Функции для сохранения и загрузки данных корзины
+    function saveCart() {
+      localStorage.setItem("cartData", JSON.stringify(cart));
+    }
 
-                console.log('Данные меню:', data);
+    function loadCart() {
+      const storedCart = localStorage.getItem("cartData");
+      if (storedCart) {
+        cart = JSON.parse(storedCart);
+        updateCartButton();
+      }
+    }
 
-                if (typeof data === 'object' && !Array.isArray(data)) {
-                    processMenuData(data);
-                } else {
-                    console.error('Ошибка: полученные данные не являются объектом с категориями', data);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки меню:', error);
-            }
+    // Функции для сохранения и загрузки данных формы заказа
+    function saveOrderFormData() {
+      const orderData = {
+        name: document.getElementById("name").value,
+        phone: document.getElementById("phone").value,
+        street: document.getElementById("street").value,
+        house: document.getElementById("house").value,
+        entrance: document.getElementById("entrance").value,
+        floor: document.getElementById("floor").value,
+        apartment: document.getElementById("apartment").value,
+        intercom: document.getElementById("intercom").value,
+      };
+      localStorage.setItem("orderFormData", JSON.stringify(orderData));
+    }
+
+    function loadOrderFormData() {
+      const savedData = localStorage.getItem("orderFormData");
+      if (savedData) {
+        const orderData = JSON.parse(savedData);
+        document.getElementById("name").value = orderData.name || "";
+        document.getElementById("phone").value = orderData.phone || "";
+        document.getElementById("street").value = orderData.street || "";
+        document.getElementById("house").value = orderData.house || "";
+        document.getElementById("entrance").value = orderData.entrance || "";
+        document.getElementById("floor").value = orderData.floor || "";
+        document.getElementById("apartment").value = orderData.apartment || "";
+        document.getElementById("intercom").value = orderData.intercom || "";
+      }
+    }
+
+    // Получение меню с сервера
+    async function fetchMenu() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/menu");
+        const data = await response.json();
+
+        console.log("Данные меню:", data);
+
+        if (typeof data === "object" && !Array.isArray(data)) {
+          processMenuData(data);
+        } else {
+          console.error("Ошибка: полученные данные не являются объектом с категориями", data);
         }
+      } catch (error) {
+        console.error("Ошибка загрузки меню:", error);
+      }
+    }
 
-        function processMenuData(data) {
-            categories = {};
+    function processMenuData(data) {
+      categories = {};
+      for (let categoryId in data) {
+        const category = data[categoryId];
+        categories[categoryId] = {
+          name: category.name,
+          items: category.items || [],
+        };
+      }
+      renderCategories();
+    }
 
-            for (let categoryId in data) {
-                let category = data[categoryId];
-                categories[categoryId] = {
-                    name: category.name,
-                    items: category.items || []
-                };
-            }
+    function renderCategories() {
+      const categoriesContainer = document.querySelector(".categories");
+      if (!categoriesContainer) {
+        console.error("Элемент .categories не найден в DOM");
+        return;
+      }
+      categoriesContainer.innerHTML = "";
 
-            renderCategories();
+      for (let categoryId in categories) {
+        const category = categories[categoryId];
+        const categoryButton = document.createElement("button");
+        categoryButton.innerText = category.name;
+        categoryButton.onclick = () => showItems(categoryId);
+        categoriesContainer.appendChild(categoryButton);
+      }
+    }
+
+    function showItems(categoryId) {
+      const itemsContainer = document.getElementById("items");
+      if (!itemsContainer) {
+        console.error("Элемент #items не найден в DOM");
+        return;
+      }
+      itemsContainer.innerHTML = "";
+
+      const category = categories[categoryId];
+      if (!category || !category.items) {
+        console.error("Категория или товары не найдены");
+        return;
+      }
+
+      category.items.forEach((item) => {
+        const itemCard = document.createElement("div");
+        itemCard.className = "item-card";
+        itemCard.innerHTML = `
+          <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
+          <h3>${item.name}</h3>
+          <p>${item.price}₽</p>
+          <button class="add-to-cart" onclick="addToCart('${item.id}', '${item.name}', ${item.price})">Добавить</button>
+        `;
+        itemsContainer.appendChild(itemCard);
+      });
+    }
+
+    function addToCart(itemId, itemName, itemPrice) {
+      let cartItem = cart.find((i) => i.id === itemId);
+      if (cartItem) {
+        cartItem.quantity++;
+      } else {
+        cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1 });
+      }
+      updateCartButton();
+      saveCart();
+    }
+
+    function updateCartButton() {
+      const cartBtn = document.getElementById("cart-button");
+      if (cartBtn) {
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        cartBtn.innerText = `🛒 Корзина (${totalItems})`;
+      }
+    }
+
+    function showCart() {
+      document.getElementById("main-content").style.display = "none";
+      document.getElementById("cart-content").style.display = "block";
+      renderCartItems();
+    }
+
+    function renderCartItems() {
+      const cartItemsContainer = document.getElementById("cart-items");
+      if (cartItemsContainer) {
+        cartItemsContainer.innerHTML = "";
+        if (cart.length === 0) {
+          cartItemsContainer.innerHTML = "<p>Корзина пуста</p>";
+        } else {
+          cart.forEach((item) => {
+            const cartItem = document.createElement("div");
+            cartItem.className = "cart-item";
+            cartItem.innerHTML = `
+              <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
+              <button onclick="removeFromCart('${item.id}')">❌</button>
+            `;
+            cartItemsContainer.appendChild(cartItem);
+          });
         }
+      }
+    }
 
-        function renderCategories() {
-            let categoriesContainer = document.querySelector(".categories");
-            if (!categoriesContainer) {
-                console.error("Элемент .categories не найден в DOM");
-                return;
-            }
-            categoriesContainer.innerHTML = "";
+    function removeFromCart(itemId) {
+      cart = cart.filter((i) => i.id !== itemId);
+      updateCartButton();
+      saveCart();
+      renderCartItems();
+    }
 
-            for (let categoryId in categories) {
-                let category = categories[categoryId];
-                let categoryButton = document.createElement("button");
-                categoryButton.innerText = category.name;
-                categoryButton.onclick = () => showItems(categoryId);
-                categoriesContainer.appendChild(categoryButton);
-            }
-        }
+    function showOrderForm() {
+      document.getElementById("cart-content").style.display = "none";
+      document.getElementById("order-form").style.display = "block";
+      loadOrderFormData();
+    }
 
-        function showItems(categoryId) {
-            let itemsContainer = document.getElementById("items");
-            if (!itemsContainer) {
-                console.error("Элемент #items не найден в DOM");
-                return;
-            }
-            itemsContainer.innerHTML = "";
+    function submitOrder() {
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      const street = document.getElementById("street").value;
+      const house = document.getElementById("house").value;
+      const entrance = document.getElementById("entrance").value;
+      const floor = document.getElementById("floor").value;
+      const apartment = document.getElementById("apartment").value;
+      const intercom = document.getElementById("intercom").value;
 
-            let category = categories[categoryId];
-            if (!category || !category.items) {
-                console.error('Категория или товары не найдены');
-                return;
-            }
+      if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom) {
+        alert("Пожалуйста, заполните все поля!");
+        return;
+      }
 
-            category.items.forEach(item => {
-                let itemCard = document.createElement("div");
-                itemCard.className = "item-card";
+      const order = {
+        user_id: tg.initDataUnsafe.user?.id || "unknown",
+        items: cart.map((item) => ({ id: item.id, price: item.price, quantity: item.quantity })),
+        delivery_info: {
+          name,
+          phone,
+          street,
+          house,
+          entrance,
+          floor,
+          apartment,
+          intercom,
+        },
+      };
 
-                itemCard.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
-                    <h3>${item.name}</h3>
-                    <p>${item.price}₽</p>
-                    <button class="add-to-cart" onclick="addToCart('${item.id}', '${item.name}', ${item.price})">Добавить</button>
-                `;
-                itemsContainer.appendChild(itemCard);
-            });
-        }
+      tg.sendData(JSON.stringify(order));
+      tg.close();
+    }
 
-        function addToCart(itemId, itemName, itemPrice) {
-            let cartItem = cart.find(i => i.id === itemId);
-            if (cartItem) {
-                cartItem.quantity++;
-            } else {
-                cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1 });
-            }
-            updateCartButton();
-        }
+    // Если пользователь нажимает кнопку "Вернуться к корзине" из формы заказа
+    function backToCart() {
+      document.getElementById("order-form").style.display = "none";
+      document.getElementById("cart-content").style.display = "block";
+    }
 
-        function updateCartButton() {
-            let cartBtn = document.getElementById("cart-button");
-            if (cartBtn) {
-                let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-                cartBtn.innerText = `🛒 Корзина (${totalItems})`;
-            }
-        }
+    // Вспомогательная функция (если требуется) для показа деталей товара
+    function showItemDetails(categoryId, itemName) {
+      // Реализуйте по необходимости
+      alert(`Детали товара: ${itemName}`);
+    }
 
-        function showCart() {
-            let mainContent = document.getElementById("main-content");
-            if (mainContent) {
-                mainContent.style.display = "none";
-            }
-
-            let cartContent = document.getElementById("cart-content");
-            if (cartContent) {
-                cartContent.style.display = "block";
-            }
-
-            let cartItemsContainer = document.getElementById("cart-items");
-            if (cartItemsContainer) {
-                cartItemsContainer.innerHTML = "";
-                if (cart.length === 0) {
-                    cartItemsContainer.innerHTML = "<p>Корзина пуста</p>";
-                } else {
-                    cart.forEach(item => {
-                        let cartItem = document.createElement("div");
-                        cartItem.className = "cart-item";
-                        cartItem.innerHTML = `
-                            <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
-                            <button onclick="removeFromCart('${item.id}')">❌</button>
-                        `;
-                        cartItemsContainer.appendChild(cartItem);
-                    });
-                }
-            }
-        }
-
-        function showOrderForm() {
-            let cartContent = document.getElementById("cart-content");
-            if (cartContent) {
-                cartContent.style.display = "none";
-            }
-
-            let orderForm = document.getElementById("order-form");
-            if (orderForm) {
-                orderForm.style.display = "block";
-            }
-        }
-
-        function submitOrder() {
-            let name = document.getElementById("name").value;
-            let phone = document.getElementById("phone").value;
-            let street = document.getElementById("street").value;
-            let house = document.getElementById("house").value;
-            let entrance = document.getElementById("entrance").value;
-            let floor = document.getElementById("floor").value;
-            let apartment = document.getElementById("apartment").value;
-            let intercom = document.getElementById("intercom").value;
-
-            if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom) {
-                alert("Пожалуйста, заполните все поля!");
-                return;
-            }
-
-            const order = {
-                user_id: tg.initDataUnsafe.user?.id || "unknown",
-                items: cart.map(item => ({ id: item.id, price: item.price, quantity: item.quantity })),
-                delivery_info: {
-                    name,
-                    phone,
-                    street,
-                    house,
-                    entrance,
-                    floor,
-                    apartment,
-                    intercom
-                }
-            };
-
-            tg.sendData(JSON.stringify(order));
-            tg.close();
-        }
-
-        function removeFromCart(itemId) {
-            cart = cart.filter(i => i.id !== itemId);
-            updateCartButton();
-            showCart();
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            console.log("Загрузка меню...");
-            fetchMenu();
-        });
-    </script>
+    document.addEventListener("DOMContentLoaded", function () {
+      console.log("Загрузка меню...");
+      fetchMenu();
+      loadCart();
+      loadOrderFormData();
+    });
+  </script>
 </head>
 <body>
-    <div class="container">
-        <div id="main-content">
-            <h1>🍔 Магазин доставки еды</h1>
-            <div class="categories"></div>
-            <div id="items" class="items"></div>
-            <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
-        </div>
-
-        <div id="cart-content" style="display: none;">
-            <h2>Корзина</h2>
-            <div id="cart-items"></div>
-            <button class="order-button" onclick="showOrderForm()">✅ Оформить заказ</button>
-            <button onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">Вернуться к меню</button>
-        </div>
-
-        <div id="order-form" style="display: none;">
-            <h2>Оформление заказа</h2>
-            <form onsubmit="event.preventDefault(); submitOrder();">
-                <label for="name">Имя:</label>
-                <input type="text" id="name" required>
-
-                <label for="phone">Номер телефона:</label>
-                <input type="tel" id="phone" required>
-
-                <label for="street">Улица:</label>
-                <input type="text" id="street" required>
-
-                <label for="house">Номер дома:</label>
-                <input type="text" id="house" required>
-
-                <label for="entrance">Подъезд:</label>
-                <input type="text" id="entrance" required>
-
-                <label for="floor">Этаж:</label>
-                <input type="text" id="floor" required>
-
-                <label for="apartment">Номер квартиры:</label>
-                <input type="text" id="apartment" required>
-
-                <label for="intercom">Код домофона:</label>
-                <input type="text" id="intercom" required>
-
-                <button type="submit" class="confirm-button">Подтвердить заказ</button>
-                <button type="button" onclick="document.getElementById('cart-content').style.display='block'; document.getElementById('order-form').style.display='none'">Вернуться к корзине</button>
-            </form>
-        </div>
+  <div class="container">
+    <div id="main-content">
+      <h1>🍔 Магазин доставки еды</h1>
+      <div class="categories"></div>
+      <div id="items" class="items"></div>
+      <button id="cart-button" class="cart-button" onclick="showCart()">🛒 Корзина (0)</button>
     </div>
+
+    <div id="cart-content" style="display: none;">
+      <h2>Корзина</h2>
+      <div id="cart-items"></div>
+      <button class="order-button" onclick="showOrderForm()">✅ Оформить заказ</button>
+      <button onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">Вернуться к меню</button>
+    </div>
+
+    <div id="order-form" style="display: none;">
+      <h2>Оформление заказа</h2>
+      <form onsubmit="event.preventDefault(); submitOrder();">
+        <label for="name">Имя:</label>
+        <input type="text" id="name" required oninput="saveOrderFormData()" />
+
+        <label for="phone">Номер телефона:</label>
+        <input type="tel" id="phone" required oninput="saveOrderFormData()" />
+
+        <label for="street">Улица:</label>
+        <input type="text" id="street" required oninput="saveOrderFormData()" />
+
+        <label for="house">Номер дома:</label>
+        <input type="text" id="house" required oninput="saveOrderFormData()" />
+
+        <label for="entrance">Подъезд:</label>
+        <input type="text" id="entrance" required oninput="saveOrderFormData()" />
+
+        <label for="floor">Этаж:</label>
+        <input type="text" id="floor" required oninput="saveOrderFormData()" />
+
+        <label for="apartment">Номер квартиры:</label>
+        <input type="text" id="apartment" required oninput="saveOrderFormData()" />
+
+        <label for="intercom">Код домофона:</label>
+        <input type="text" id="intercom" required oninput="saveOrderFormData()" />
+
+        <button type="submit" class="confirm-button">Подтвердить заказ</button>
+        <button type="button" onclick="backToCart()">Вернуться к корзине</button>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
