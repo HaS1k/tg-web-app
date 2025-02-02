@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 import logging
+from datetime import datetime
 
 import httpx
 import uvicorn
@@ -30,7 +31,10 @@ app = FastAPI()
 menu_data = {}
 stoplist_data = {}
 
-# API-конфигурация
+# Глобальный словарь для хранения данных заказов, полученных из Mini App
+orders_pending = {}
+
+# API-конфигурация для получения меню
 API_URL = "https://api.sbis.ru/retail/nomenclature/list?"
 API_BASE_URL = "https://api.sbis.ru/retail"
 SBIS_TOKEN = os.getenv("SBIS_TOKEN")
@@ -44,6 +48,10 @@ API_PARAMS = {
     "page": 0,
     "pageSize": 100,
 }
+
+# Константы для создания заказа в Saby Retail
+POINT_ID = 7245          # Идентификатор точки продаж (замените при необходимости)
+PRICE_LIST_ID = 37       # Идентификатор прайс-листа
 
 # CORS настройка
 app.add_middleware(
@@ -106,8 +114,10 @@ async def fetch_menu():
                         logging.info(f"Нет изображения для товара {item.get('name')}")
                         image_url = "https://via.placeholder.com/150"
 
+                    # Сохраняем не только id, но и externalId (если API его возвращает)
                     items[hierarchical_id] = {
-                        "id": item.get("id"),  # Добавляем ID товара
+                        "externalId": item.get("externalId"),  # новое поле
+                        "id": item.get("id"),
                         "name": item.get("name"),
                         "price": item.get("cost"),
                         "description": item.get("description"),
@@ -131,12 +141,10 @@ async def fetch_menu():
 # Функция формирования стартовой клавиатуры (как после /start)
 def get_start_reply_markup():
     return ReplyKeyboardMarkup(
-        keyboard=[[
-            KeyboardButton(
-                text="open",
-                web_app=WebAppInfo(url="https://storied-souffle-8bb402.netlify.app/"),
-            )
-        ]],
+        keyboard=[[KeyboardButton(
+            text="open",
+            web_app=WebAppInfo(url="https://storied-souffle-8bb402.netlify.app/")
+        )]],
         resize_keyboard=True
     )
 
@@ -159,42 +167,38 @@ async def handle_web_app_data(message: types.Message):
     try:
         # Получаем данные из Mini App
         data = json.loads(message.web_app_data.data)
-        user_id = data.get("user_id", "unknown")  # Если user_id отсутствует, используем "unknown"
-        items = data.get("items", [])  # Если items отсутствует, используем пустой список
-        delivery_info = data.get("delivery_info", {})  # Если delivery_info отсутствует, используем пустой словарь
+        user_id = data.get("user_id", "unknown")
+        items = data.get("items", [])
+        delivery_info = data.get("delivery_info", {})
 
-        # Логируем полученные данные
         logging.info(f"Получены данные от пользователя {user_id}:")
         logging.info(f"Товары: {items}")
         logging.info(f"Детали доставки: {delivery_info}")
 
-        # Формируем ответное сообщение
+        # Сохраняем данные заказа для данного пользователя
+        orders_pending[message.from_user.id] = data
+
         response_message = (
             f"Ваш заказ оформлен!\n\n"
             f"Детали доставки:\n"
             f"Имя: {delivery_info.get('name', 'Не указано')}\n"
             f"Телефон: {delivery_info.get('phone', 'Не указан')}\n"
-            f"Адрес: {delivery_info.get('street', 'Не указана')}, дом {delivery_info.get('house', 'Не указан')}, кв {delivery_info.get('apartment', 'Не указана')}\n\n"
+            f"Адрес: {delivery_info.get('street', 'Не указана')}, д. {delivery_info.get('house', 'Не указан')}, кв. {delivery_info.get('apartment', 'Не указана')}\n\n"
             f"Товары:\n"
         )
 
-        # Добавляем информацию о товарах
         for item in items:
-            response_message += f"Товар ID: {item.get('id', 'Не указан')} - {item.get('price', 0)}₽ x {item.get('quantity', 0)}\n"
+            response_message += f"Товар: {item.get('name', 'Не указан')} - {item.get('price', 0)}₽ x {item.get('quantity', 0)}\n"
 
-        # Отправляем ответное сообщение пользователю
         await message.answer(response_message)
 
-        # Подготавливаем данные заказа для передачи в веб-приложение при редактировании
         order_json = json.dumps(data)
         order_encoded = base64.urlsafe_b64encode(order_json.encode()).decode()
 
-        # Формируем инлайн-клавиатуру с 3 кнопками
         inline_kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Подтвердить заказ", callback_data="confirm_order")],
             [InlineKeyboardButton(
                 text="Редактировать заказ",
-                # Передаём закодированные данные заказа в параметре order_data
                 web_app=WebAppInfo(url=f"https://storied-souffle-8bb402.netlify.app/?order_data={order_encoded}")
             )],
             [InlineKeyboardButton(text="Отменить заказ", callback_data="cancel_order")]
@@ -209,17 +213,97 @@ async def handle_web_app_data(message: types.Message):
 # Обработчик callback-запросов для кнопки "Подтвердить заказ"
 @dp.callback_query(lambda c: c.data == "confirm_order")
 async def process_confirm_order(callback_query: types.CallbackQuery):
-    await callback_query.answer("Заказ подтвержден!", show_alert=True)
-    # Здесь можно добавить дальнейшую логику подтверждения заказа
+    user_id = callback_query.from_user.id
+    order_data = orders_pending.get(user_id)
+    if not order_data:
+        await callback_query.answer("Нет данных заказа. Повторите оформление.", show_alert=True)
+        return
+
+    delivery_info = order_data.get("delivery_info", {})
+    items = order_data.get("items", [])
+
+    nomenclatures = []
+    for item in items:
+        # Используем externalId вместо id для заказа
+        nomenclatures.append({
+            "externalId": item.get("externalId"),
+            "priceListId": PRICE_LIST_ID,
+            "count": item.get("quantity", 1),
+            "cost": item.get("price")
+        })
+
+    street = delivery_info.get("street", "")
+    house = delivery_info.get("house", "")
+    entrance = delivery_info.get("entrance", "")
+    floor = delivery_info.get("floor", "")
+    apartment = delivery_info.get("apartment", "")
+    intercom = delivery_info.get("intercom", "")
+    address_full = f"ул. {street}, д. {house}, подъезд {entrance}, этаж {floor}, кв. {apartment}"
+    address_json = json.dumps({
+        "Street": street,
+        "HouseNum": house,
+        "Entrance": entrance,
+        "Floor": floor,
+        "Apartment": apartment,
+        "Intercom": intercom
+    }, ensure_ascii=False)
+
+    order_payload = {
+        "product": "delivery",
+        "pointId": POINT_ID,
+        "comment": "тестовый заказ на доставку",
+        "customer": {
+            "externalId": None,
+            "name": delivery_info.get("name", ""),
+            "lastname": "",
+            "patronymic": "",
+            "email": "",
+            "phone": delivery_info.get("phone", "")
+        },
+        "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "nomenclatures": nomenclatures,
+        "delivery": {
+            "addressFull": address_full,
+            "addressJSON": address_json,
+            "paymentType": "card",
+            "persons": 1,
+            "isPickup": False
+        }
+    }
+
+    # Отправляем запрос к API Saby Retail
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Content-Type": "application/json",
+            "X-SBISAccessToken": SBIS_TOKEN
+        }
+        try:
+            response = await client.post(
+                "https://api.sbis.ru/retail/order/create",
+                json=order_payload,
+                headers=headers
+            )
+            if response.status_code == 200:
+                resp_json = response.json()
+                result_text = f"Заказ успешно создан!\n\nОтвет API:\n```json\n{json.dumps(resp_json, ensure_ascii=False, indent=2)}\n```"
+            else:
+                result_text = f"Ошибка создания заказа. Код: {response.status_code}\nОтвет API:\n```json\n{response.text}\n```"
+        except Exception as e:
+            result_text = f"Ошибка при выполнении запроса: {e}"
+
+    await bot.send_message(
+        chat_id=user_id,
+        text=result_text,
+        parse_mode="Markdown"
+    )
+    await callback_query.answer("Запрос отправлен!", show_alert=True)
 
 # Обработчик callback-запросов для кнопки "Отменить заказ"
 @dp.callback_query(lambda c: c.data == "cancel_order")
 async def process_cancel_order(callback_query: types.CallbackQuery):
     await callback_query.answer("Заказ отменен", show_alert=True)
-    # "Сбрасываем" состояние бота и возвращаем стартовую клавиатуру
     markup = get_start_reply_markup()
     await callback_query.message.answer("Заказ отменен. Возвращаем в начальное состояние.", reply_markup=markup)
-    # При необходимости можно также перезагрузить меню или выполнить дополнительные действия
 
 # 🔗 API маршруты
 @app.get("/menu")
@@ -263,3 +347,4 @@ if __name__ == "__main__":
         logging.info("Выключение сервера...")
     except Exception as e:
         logging.error(f"Критическая ошибка: {e}")
+

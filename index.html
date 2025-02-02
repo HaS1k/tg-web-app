@@ -119,22 +119,25 @@
       category.items.forEach((item) => {
         const itemCard = document.createElement("div");
         itemCard.className = "item-card";
+        // Если поле externalId существует, передаём его, иначе используем обычный id
+        const externalId = item.externalId ? item.externalId : item.id;
         itemCard.innerHTML = `
           <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
           <h3>${item.name}</h3>
           <p>${item.price}₽</p>
-          <button class="add-to-cart" onclick="addToCart('${item.id}', '${item.name}', ${item.price})">Добавить</button>
+          <button class="add-to-cart" onclick="addToCart('${externalId}', '${item.name}', ${item.price})">Добавить</button>
         `;
         itemsContainer.appendChild(itemCard);
       });
     }
 
-    function addToCart(itemId, itemName, itemPrice) {
-      let cartItem = cart.find((i) => i.id === itemId);
+    // Функция addToCart теперь сохраняет внешний идентификатор товара как externalId
+    function addToCart(itemExternalId, itemName, itemPrice) {
+      let cartItem = cart.find((i) => i.externalId === itemExternalId);
       if (cartItem) {
         cartItem.quantity++;
       } else {
-        cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1 });
+        cart.push({ externalId: itemExternalId, name: itemName, price: itemPrice, quantity: 1 });
       }
       updateCartButton();
       saveCart();
@@ -166,7 +169,7 @@
             cartItem.className = "cart-item";
             cartItem.innerHTML = `
               <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
-              <button onclick="removeFromCart('${item.id}')">❌</button>
+              <button onclick="removeFromCart('${item.externalId}')">❌</button>
             `;
             cartItemsContainer.appendChild(cartItem);
           });
@@ -174,8 +177,8 @@
       }
     }
 
-    function removeFromCart(itemId) {
-      cart = cart.filter((i) => i.id !== itemId);
+    function removeFromCart(itemExternalId) {
+      cart = cart.filter((i) => i.externalId !== itemExternalId);
       updateCartButton();
       saveCart();
       renderCartItems();
@@ -187,6 +190,7 @@
       loadOrderFormData();
     }
 
+    // При отправке заказа формируем объект, где товары передаются с externalId
     function submitOrder() {
       const name = document.getElementById("name").value;
       const phone = document.getElementById("phone").value;
@@ -204,7 +208,8 @@
 
       const order = {
         user_id: tg.initDataUnsafe.user?.id || "unknown",
-        items: cart.map((item) => ({ id: item.id, price: item.price, quantity: item.quantity })),
+        // Здесь вместо id передаём externalId для каждого товара
+        items: cart.map((item) => ({ externalId: item.externalId, price: item.price, quantity: item.quantity })),
         delivery_info: {
           name,
           phone,
@@ -229,7 +234,6 @@
 
     // Вспомогательная функция (если требуется) для показа деталей товара
     function showItemDetails(categoryId, itemName) {
-      // Реализуйте по необходимости
       alert(`Детали товара: ${itemName}`);
     }
 
