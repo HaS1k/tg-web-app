@@ -25,7 +25,7 @@
       }
     }
 
-    // Функции для сохранения и загрузки данных формы заказа
+    // Функции для сохранения и загрузки данных формы заказа (без новых полей, они обрабатываются при отправке)
     function saveOrderFormData() {
       const orderData = {
         name: document.getElementById("name").value,
@@ -35,7 +35,7 @@
         entrance: document.getElementById("entrance").value,
         floor: document.getElementById("floor").value,
         apartment: document.getElementById("apartment").value,
-        intercom: document.getElementById("intercom").value,
+        intercom: document.getElementById("intercom").value
       };
       localStorage.setItem("orderFormData", JSON.stringify(orderData));
     }
@@ -60,9 +60,7 @@
       try {
         const response = await fetch("http://127.0.0.1:8000/menu");
         const data = await response.json();
-
         console.log("Данные меню:", data);
-
         if (typeof data === "object" && !Array.isArray(data)) {
           processMenuData(data);
         } else {
@@ -79,7 +77,7 @@
         const category = data[categoryId];
         categories[categoryId] = {
           name: category.name,
-          items: category.items || [],
+          items: category.items || []
         };
       }
       renderCategories();
@@ -92,7 +90,6 @@
         return;
       }
       categoriesContainer.innerHTML = "";
-
       for (let categoryId in categories) {
         const category = categories[categoryId];
         const categoryButton = document.createElement("button");
@@ -109,17 +106,15 @@
         return;
       }
       itemsContainer.innerHTML = "";
-
       const category = categories[categoryId];
       if (!category || !category.items) {
         console.error("Категория или товары не найдены");
         return;
       }
-
       category.items.forEach((item) => {
         const itemCard = document.createElement("div");
         itemCard.className = "item-card";
-        // Если поле externalId существует, передаём его, иначе используем обычный id
+        // Если поле externalId существует, используем его, иначе обычный id
         const externalId = item.externalId ? item.externalId : item.id;
         itemCard.innerHTML = `
           <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
@@ -165,7 +160,9 @@
         if (cart.length === 0) {
           cartItemsContainer.innerHTML = "<p>Корзина пуста</p>";
         } else {
+          let total = 0;
           cart.forEach((item) => {
+            total += item.price * item.quantity;
             const cartItem = document.createElement("div");
             cartItem.className = "cart-item";
             cartItem.innerHTML = `
@@ -174,6 +171,11 @@
             `;
             cartItemsContainer.appendChild(cartItem);
           });
+          // Выводим итоговую сумму
+          const totalDiv = document.createElement("div");
+          totalDiv.className = "cart-total";
+          totalDiv.innerHTML = `<p>Итоговая сумма: <strong>${total}₽</strong></p>`;
+          cartItemsContainer.appendChild(totalDiv);
         }
       }
     }
@@ -207,8 +209,16 @@
       const apartment = document.getElementById("apartment").value;
       const intercom = document.getElementById("intercom").value;
 
-      if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom) {
-        alert("Пожалуйста, заполните все поля!");
+      // Новые поля
+      const deliveryType = document.getElementById("delivery_type").value;
+      const orderDescription = document.getElementById("order_description").value;
+      const numPersons = document.getElementById("num_persons").value;
+      const deliveryTime = document.getElementById("delivery_time").value;
+      const paymentType = document.getElementById("payment_type").value;
+
+      if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom ||
+          !deliveryType || !numPersons || !deliveryTime || !paymentType) {
+        alert("Пожалуйста, заполните все обязательные поля!");
         return;
       }
 
@@ -225,7 +235,12 @@
           floor,
           apartment,
           intercom,
-        },
+          deliveryType,       // Доставка или самовывоз
+          orderDescription,   // Дополнительное описание заказа
+          numPersons,         // Количество человек
+          deliveryTime,       // Время доставки
+          paymentType         // Способ оплаты
+        }
       };
 
       // Отправляем данные заказа боту
@@ -299,6 +314,28 @@
 
         <label for="intercom">Код домофона:</label>
         <input type="text" id="intercom" required />
+
+        <!-- Новые поля заказа -->
+        <label for="delivery_type">Тип заказа:</label>
+        <select id="delivery_type" required>
+          <option value="delivery">Доставка</option>
+          <option value="pickup">Самовывоз</option>
+        </select>
+
+        <label for="order_description">Дополнительное описание заказа:</label>
+        <textarea id="order_description" rows="3"></textarea>
+
+        <label for="num_persons">Количество человек:</label>
+        <input type="number" id="num_persons" min="1" required />
+
+        <label for="delivery_time">Время доставки:</label>
+        <input type="time" id="delivery_time" required />
+
+        <label for="payment_type">Способ оплаты:</label>
+        <select id="payment_type" required>
+          <option value="card">Картой</option>
+          <option value="cash">Наличными</option>
+        </select>
 
         <button type="submit" class="confirm-button">Подтвердить заказ</button>
         <button type="button" onclick="backToCart()">Вернуться к корзине</button>
