@@ -166,60 +166,95 @@
         categoriesContainer.appendChild(categoryButton);
       }
     }
+    document.addEventListener("DOMContentLoaded", () => {
+  const cartButton = document.getElementById("cart-button");
+  const itemsContainer = document.getElementById("items");
+  const cartItemsContainer = document.getElementById("cart-items");
+  const mainContent = document.getElementById("main-content");
+  const cartContent = document.getElementById("cart-content");
+  const orderForm = document.getElementById("order-form");
 
-    function showItems(categoryId) {
-      const itemsContainer = document.getElementById("items");
-      if (!itemsContainer) {
-        console.error("Элемент #items не найден в DOM");
-        return;
-      }
-      itemsContainer.innerHTML = "";
-      const category = categories[categoryId];
-      if (!category || !category.items) {
-        console.error("Категория или товары не найдены");
-        return;
-      }
-      category.items.forEach((item) => {
-        const itemCard = document.createElement("div");
-        itemCard.className = "item-card";
-        // Если поле externalId существует, используем его, иначе обычный id
-        const externalId = item.externalId ? item.externalId : item.id;
-        itemCard.innerHTML = `
-          <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
-          <h3>${item.name}</h3>
-          <p>${item.price}₽</p>
-          <button class="add-to-cart" onclick="addToCart('${externalId}', '${item.name}', ${item.price})">Добавить</button>
-        `;
-        itemsContainer.appendChild(itemCard);
-      });
+  function showItems(categoryId) {
+    if (!itemsContainer) return;
+    itemsContainer.innerHTML = "";
+    const category = categories[categoryId];
+    if (!category || !category.items) return;
+    category.items.forEach((item) => {
+      const itemCard = document.createElement("div");
+      itemCard.className = "item-card";
+      const externalId = item.externalId || item.id;
+      itemCard.innerHTML = `
+        <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
+        <h3>${item.name}</h3>
+        <p>${item.price}₽</p>
+        <button class="add-to-cart" onclick="addToCart('${externalId}', '${item.name}', ${item.price})">Добавить</button>
+      `;
+      itemsContainer.appendChild(itemCard);
+    });
+  }
+
+  function addToCart(itemExternalId, itemName, itemPrice) {
+    let cartItem = cart.find((i) => i.externalId === itemExternalId);
+    if (cartItem) {
+      cartItem.quantity++;
+    } else {
+      cart.push({ externalId: itemExternalId, name: itemName, price: itemPrice, quantity: 1 });
     }
+    updateCartButton();
+    saveCart();
+  }
 
-    // Функция addToCart сохраняет externalId товара
-    function addToCart(itemExternalId, itemName, itemPrice) {
-      let cartItem = cart.find((i) => i.externalId === itemExternalId);
-      if (cartItem) {
-        cartItem.quantity++;
-      } else {
-        cart.push({ externalId: itemExternalId, name: itemName, price: itemPrice, quantity: 1 });
-      }
-      updateCartButton();
-      // Сохраняем корзину сразу, чтобы данные были актуальны до подтверждения заказа
-      saveCart();
+  function updateCartButton() {
+    if (cartButton) {
+      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      cartButton.innerText = `🛒 Корзина (${totalItems})`;
     }
+  }
 
-    function updateCartButton() {
-      const cartBtn = document.getElementById("cart-button");
-      if (cartBtn) {
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        cartBtn.innerText = `🛒 Корзина (${totalItems})`;
-      }
-    }
-
-    function showCart() {
-      document.getElementById("main-content").style.display = "none";
-      document.getElementById("cart-content").style.display = "block";
+  function showCart() {
+    if (mainContent && cartContent) {
+      mainContent.style.display = "none";
+      cartContent.style.display = "block";
       renderCartItems();
     }
+  }
+
+  function renderCartItems() {
+    if (!cartItemsContainer) return;
+    cartItemsContainer.innerHTML = cart.length === 0 ? "<p>Корзина пуста</p>" : "";
+    let total = 0;
+    cart.forEach((item) => {
+      total += item.price * item.quantity;
+      const cartItem = document.createElement("div");
+      cartItem.className = "cart-item";
+      cartItem.innerHTML = `
+        <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
+        <button onclick="removeFromCart('${item.externalId}')">❌</button>
+      `;
+      cartItemsContainer.appendChild(cartItem);
+    });
+    const totalDiv = document.createElement("div");
+    totalDiv.className = "cart-total";
+    totalDiv.innerHTML = `<p>Итоговая сумма: <strong>${total}₽</strong></p>`;
+    cartItemsContainer.appendChild(totalDiv);
+  }
+
+  function removeFromCart(itemExternalId) {
+    cart = cart.filter((i) => i.externalId !== itemExternalId);
+    updateCartButton();
+    saveCart();
+    renderCartItems();
+  }
+
+  function showOrderForm() {
+    if (cartContent && orderForm) {
+      cartContent.style.display = "none";
+      orderForm.style.display = "block";
+      loadOrderFormData();
+    }
+  }
+});
+
 
     function renderCartItems() {
       const cartItemsContainer = document.getElementById("cart-items");
@@ -369,14 +404,7 @@
     </form>
   </div>
   <script>
-    function toggleCart(show) {
-      document.getElementById('cart-content').classList.toggle('hidden', !show);
-      document.getElementById('order-form').classList.toggle('hidden', show);
-    }
-    function showOrderForm() {
-      document.getElementById('cart-content').classList.add('hidden');
-      document.getElementById('order-form').classList.remove('hidden');
-    }
+
     function submitOrder() {
       alert('Заказ отправлен!');
     }
