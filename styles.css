@@ -103,3 +103,22 @@ body {
 .checkout-button:hover {
     background: #218838;
 }
+
+.item-card img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.category-btn {
+  padding: 8px 12px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 5px;
+}
