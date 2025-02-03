@@ -66,44 +66,61 @@
     }
 
     // Если в URL есть параметр order_data, загружаем его и сохраняем в localStorage и в форму
-    function loadOrderDataFromURL() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const orderDataParam = urlParams.get('order_data');
-      if(orderDataParam){
-        try {
-          const orderDataStr = atob(orderDataParam);
-          const orderData = JSON.parse(orderDataStr);
-          // Заполняем поля формы из orderData.delivery_info
-          if(orderData.delivery_info){
-            document.getElementById("name").value = orderData.delivery_info.name || "";
-            document.getElementById("phone").value = orderData.delivery_info.phone || "";
-            document.getElementById("street").value = orderData.delivery_info.street || "";
-            document.getElementById("house").value = orderData.delivery_info.house || "";
-            document.getElementById("entrance").value = orderData.delivery_info.entrance || "";
-            document.getElementById("floor").value = orderData.delivery_info.floor || "";
-            document.getElementById("apartment").value = orderData.delivery_info.apartment || "";
-            document.getElementById("intercom").value = orderData.delivery_info.intercom || "";
-            document.getElementById("delivery_type").value = orderData.delivery_info.deliveryType || "delivery";
-            document.getElementById("order_description").value = orderData.delivery_info.orderDescription || "";
-            document.getElementById("num_persons").value = orderData.delivery_info.numPersons || "1";
-            document.getElementById("delivery_time").value = orderData.delivery_info.deliveryTime || "";
-            document.getElementById("payment_type").value = orderData.delivery_info.paymentType || "card";
-          }
-          // Если в orderData есть товары, сохраняем их в корзину и обновляем отображение
-          if(orderData.items){
-            cart = orderData.items;
-            updateCartButton();
-            renderCartItems();
-            saveCart();
-          }
-          // Сохраняем данные формы в localStorage, чтобы они не пропали
-          saveOrderFormData();
-          console.log("Данные из URL успешно загружены");
-        } catch (e) {
-          console.error("Ошибка загрузки данных из URL: ", e);
+
+  // Если в URL есть параметр order_data, загружаем его и сохраняем в localStorage и в форму
+  function loadOrderDataFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderDataParam = urlParams.get('order_data');
+    if (orderDataParam) {
+      try {
+        const orderDataStr = atob(orderDataParam);
+        const orderData = JSON.parse(orderDataStr);
+        // Заполняем поля формы из orderData.delivery_info
+        if (orderData.delivery_info) {
+          document.getElementById("name").value = orderData.delivery_info.name || "";
+          document.getElementById("phone").value = orderData.delivery_info.phone || "";
+          document.getElementById("street").value = orderData.delivery_info.street || "";
+          document.getElementById("house").value = orderData.delivery_info.house || "";
+          document.getElementById("entrance").value = orderData.delivery_info.entrance || "";
+          document.getElementById("floor").value = orderData.delivery_info.floor || "";
+          document.getElementById("apartment").value = orderData.delivery_info.apartment || "";
+          document.getElementById("intercom").value = orderData.delivery_info.intercom || "";
+          document.getElementById("delivery_type").value = orderData.delivery_info.deliveryType || "delivery";
+          document.getElementById("order_description").value = orderData.delivery_info.orderDescription || "";
+          document.getElementById("num_persons").value = orderData.delivery_info.numPersons || "1";
+          document.getElementById("delivery_time").value = orderData.delivery_info.deliveryTime || "";
+          document.getElementById("payment_type").value = orderData.delivery_info.paymentType || "card";
         }
+        // Если в orderData есть товары, сохраняем их в корзину и обновляем отображение
+        if (orderData.items) {
+          cart = orderData.items;
+          updateCartButton();
+          renderCartItems();
+          saveCart();
+        }
+        // Сохраняем данные формы в localStorage, чтобы они не пропали
+        saveOrderFormData();
+        console.log("Данные из URL успешно загружены");
+        // После загрузки удаляем параметры из URL, чтобы дальнейшие изменения не перезаписывались
+        history.replaceState(null, "", window.location.pathname);
+      } catch (e) {
+        console.error("Ошибка загрузки данных из URL: ", e);
       }
     }
+  }
+
+  // Остальной код остается без изменений...
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("Загрузка меню...");
+    fetchMenu();
+    loadCart();
+    // Если URL содержит параметр order_data, загружаем данные для редактирования
+    loadOrderDataFromURL();
+    // Если нет, пробуем загрузить сохранённые данные из localStorage
+    loadOrderFormData();
+  });
+
+
 
     // Получение меню с сервера
     async function fetchMenu() {
