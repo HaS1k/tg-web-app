@@ -413,9 +413,9 @@ function renderCategories() {
     <!-- Корзина -->
     <div id="cart-content" style="display: none;">
       <div class="d-flex align-items-center mb-4">
-        <button class="btn btn-outline-secondary me-3" onclick="backToMain()">
-          ←
-        </button>
+        
+        <button class="btn btn-outline-secondary me-3" onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'">←</button>
+        </div>
         <h2 class="h5 mb-0">Ваша корзина</h2>
       </div>
       
