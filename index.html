@@ -4,46 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Магазин доставки еды</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Магазин доставки еды</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-      .telegram-theme {
-          background-color: var(--tg-theme-bg-color, #ffffff);
-          color: var(--tg-theme-text-color, #000000);
-          min-height: 100vh;
-      }
-      
-      .product-card {
-          transition: transform 0.2s;
-          border: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
-      }
-      
-      .product-card:hover {
-          transform: translateY(-2px);
-      }
-      
-      .cart-badge {
-          position: relative;
-          top: -2px;
-          font-size: 0.75em;
-      }
-      
-      .form-section {
-          background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-          border-radius: 8px;
-          padding: 1rem;
-          margin-bottom: 1rem;
-      }
-      
-      .product-image {
-          width: 80px;
-          height: 80px;
-          object-fit: cover;
-          border-radius: 8px;
-      }
-  </style>
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .product-card {
+      transition: transform 0.2s;
+      border: 1px solid #f0f0f0;
+    }
+    .product-image {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .cart-badge {
+      position: relative;
+      top: -2px;
+      font-size: 0.75em;
+    }
+  </style>
+
+
   <script>
     let cart = [];
     let categories = {};
@@ -377,117 +359,113 @@
     });
   </script>
 </head>
-<body class="telegram-theme">
-    <div class="container py-3">
-        <!-- Главный экран -->
-        <div id="main-screen">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h4 mb-0">🍔 Наше меню</h1>
-                <button id="cart-btn" class="btn btn-outline-primary position-relative" onclick="showCart()">
-                    🛒 Корзина
-                    <span id="cart-counter" class="cart-badge badge bg-danger">0</span>
-                </button>
-            </div>
+<body class="bg-light">
+  <div class="container py-3">
+    <!-- Главное меню -->
+    <div id="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h4 mb-0">🍔 Наше меню</h1>
+        <button id="cart-button" class="btn btn-outline-primary position-relative" onclick="showCart()">
+          🛒 Корзина
+          <span id="cart-counter" class="cart-badge badge bg-danger">0</span>
+        </button>
+      </div>
 
-            <div id="categories" class="d-flex flex-wrap gap-2 mb-4"></div>
-            
-            <div id="products-grid" class="row g-3"></div>
-        </div>
-
-        <!-- Корзина -->
-        <div id="cart-screen" style="display: none;">
-            <div class="d-flex align-items-center mb-4">
-                <button class="btn btn-outline-secondary me-3" onclick="backToMain()">
-                    ←
-                </button>
-                <h2 class="h5 mb-0">Ваша корзина</h2>
-            </div>
-            
-            <div id="cart-items" class="mb-4"></div>
-            
-            <div class="d-grid gap-2">
-                <button class="btn btn-success" onclick="showOrderForm()">
-                    🚀 Оформить заказ
-                </button>
-            </div>
-        </div>
-
-        <!-- Форма заказа -->
-        <div id="order-screen" style="display: none;">
-            <div class="d-flex align-items-center mb-4">
-                <button class="btn btn-outline-secondary me-3" onclick="backToCart()">
-                    ←
-                </button>
-                <h2 class="h5 mb-0">Оформление заказа</h2>
-            </div>
-
-            <form onsubmit="event.preventDefault(); submitOrder();">
-                <div class="form-section">
-                    <div class="mb-3">
-                        <label class="form-label">Контактные данные</label>
-                        <input type="text" class="form-control mb-2" id="name" placeholder="Имя" required>
-                        <input type="tel" class="form-control" id="phone" placeholder="Телефон" required>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="mb-3">
-                        <label class="form-label">Адрес доставки</label>
-                        <div class="row g-2 mb-2">
-                            <div class="col-8">
-                                <input type="text" class="form-control" id="street" placeholder="Улица" required>
-                            </div>
-                            <div class="col-4">
-                                <input type="text" class="form-control" id="house" placeholder="Дом" required>
-                            </div>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-4">
-                                <input type="text" class="form-control" id="entrance" placeholder="Подъезд">
-                            </div>
-                            <div class="col-4">
-                                <input type="text" class="form-control" id="floor" placeholder="Этаж">
-                            </div>
-                            <div class="col-4">
-                                <input type="text" class="form-control" id="apartment" placeholder="Квартира">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="mb-3">
-                        <label class="form-label">Детали заказа</label>
-                        <select class="form-select mb-2" id="delivery_type" required>
-                            <option value="delivery">Доставка</option>
-                            <option value="pickup">Самовывоз</option>
-                        </select>
-                        
-                        <input type="time" class="form-control mb-2" id="delivery_time" required>
-                        
-                        <select class="form-select mb-2" id="payment_type" required>
-                            <option value="card">Карта</option>
-                            <option value="cash">Наличные</option>
-                        </select>
-                        
-                        <input type="number" class="form-control mb-2" id="num_persons" min="1" placeholder="Количество персон" required>
-                        
-                        <textarea class="form-control" id="order_description" rows="2" placeholder="Комментарий к заказу"></textarea>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success">✅ Подтвердить заказ</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="backToCart()">
-                        Назад в корзину
-                    </button>
-                </div>
-            </form>
-        </div>
+      <div id="categories" class="d-flex flex-wrap gap-2 mb-4"></div>
+      <div id="items" class="row g-3"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Тут должен быть ваш JavaScript -->
+    <!-- Корзина -->
+    <div id="cart-content" style="display: none;">
+      <div class="d-flex align-items-center mb-4">
+        <button class="btn btn-outline-secondary me-3" onclick="backToMain()">
+          ←
+        </button>
+        <h2 class="h5 mb-0">Ваша корзина</h2>
+      </div>
+      
+      <div id="cart-items" class="mb-4"></div>
+      
+      <div class="d-grid gap-2">
+        <button class="btn btn-success" onclick="showOrderForm()">
+          🚀 Оформить заказ
+        </button>
+      </div>
+    </div>
+
+    <!-- Форма заказа -->
+    <div id="order-form" style="display: none;">
+      <div class="d-flex align-items-center mb-4">
+        <button class="btn btn-outline-secondary me-3" onclick="backToCart()">
+          ←
+        </button>
+        <h2 class="h5 mb-0">Оформление заказа</h2>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitOrder();">
+        <div class="mb-3">
+          <label class="form-label">Контактные данные</label>
+          <input type="text" class="form-control mb-2" id="name" placeholder="Имя" required>
+          <input type="tel" class="form-control" id="phone" placeholder="Телефон" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Адрес доставки</label>
+          <div class="row g-2 mb-2">
+            <div class="col-8">
+              <input type="text" class="form-control" id="street" placeholder="Улица" required>
+            </div>
+            <div class="col-4">
+              <input type="text" class="form-control" id="house" placeholder="Дом" required>
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-3">
+              <input type="text" class="form-control" id="entrance" placeholder="Подъезд">
+            </div>
+            <div class="col-3">
+              <input type="text" class="form-control" id="floor" placeholder="Этаж">
+            </div>
+            <div class="col-3">
+              <input type="text" class="form-control" id="apartment" placeholder="Квартира">
+            </div>
+            <div class="col-3">
+              <input type="text" class="form-control" id="intercom" placeholder="Домофон">
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Детали заказа</label>
+          <select class="form-select mb-2" id="delivery_type" required>
+            <option value="delivery">Доставка</option>
+            <option value="pickup">Самовывоз</option>
+          </select>
+          
+          <input type="time" class="form-control mb-2" id="delivery_time" required>
+          
+          <select class="form-select mb-2" id="payment_type" required>
+            <option value="card">Карта</option>
+            <option value="cash">Наличные</option>
+          </select>
+          
+          <input type="number" class="form-control mb-2" id="num_persons" min="1" placeholder="Количество персон" required>
+          
+          <textarea class="form-control" id="order_description" rows="2" placeholder="Комментарий к заказу"></textarea>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-success">✅ Подтвердить заказ</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="backToCart()">
+            Назад в корзину
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Оригинальный JavaScript остается без изменений -->
 </body>
 </html>
 
