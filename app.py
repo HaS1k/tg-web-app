@@ -184,6 +184,7 @@ async def handle_web_app_data(message: types.Message):
             [InlineKeyboardButton(text="Подтвердить заказ", callback_data="confirm_order")],
             [InlineKeyboardButton(
                 text="Редактировать заказ",
+                # При нажатии на эту кнопку веб-приложение откроется с сохранёнными данными
                 web_app=WebAppInfo(url=f"https://storied-souffle-8bb402.netlify.app/?order_data={order_encoded}")
             )],
             [InlineKeyboardButton(text="Отменить заказ", callback_data="cancel_order")]
@@ -193,6 +194,7 @@ async def handle_web_app_data(message: types.Message):
     except Exception as e:
         logging.error(f"Ошибка обработки данных заказа: {e}")
         await message.answer("Произошла ошибка при обработке вашего заказа.")
+
 
 @dp.callback_query(lambda c: c.data == "confirm_order")
 async def process_confirm_order(callback_query: types.CallbackQuery):
@@ -216,7 +218,6 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
         })
     logging.info(f"Формирование заказа для пользователя {user_id} с товарами: {nomenclatures}")
 
-    # Получаем стандартные адресные данные
     street = delivery_info.get("street", "")
     house = delivery_info.get("house", "")
     entrance = delivery_info.get("entrance", "")
@@ -231,8 +232,6 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
     delivery_time_str = delivery_info.get("deliveryTime")           # Ожидается формат "HH:MM"
     payment_type = delivery_info.get("paymentType")                  # "card" или "cash"
 
-    # Формируем время доставки на основе введённого времени.
-    # Если введённое время уже прошло сегодня, то прибавляем 1 день.
     try:
         today = datetime.now().date()
         delivery_dt = datetime.strptime(f"{today} {delivery_time_str}", "%Y-%m-%d %H:%M")
@@ -240,18 +239,15 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
             delivery_dt += timedelta(days=1)
     except Exception as e:
         logging.error(f"Ошибка при разборе времени доставки: {e}")
-        # Если ошибка разбора, используем время сейчас + 1 мин
         delivery_dt = datetime.now() + timedelta(minutes=1)
     order_datetime = delivery_dt.strftime("%Y-%m-%d %H:%M:%S")
     logging.info(f"Устанавливаем время доставки: {order_datetime}")
 
-    # Если тип заказа "pickup" (самовывоз), то адрес доставки можно оставить пустым
     if delivery_type == "pickup":
         address_full = ""
         address_json = "{}"
     else:
         address_full = f"ул. {street}, д. {house}, подъезд {entrance}, этаж {floor}, кв. {apartment}"
-        # Формируем JSON адреса; можно добавить дополнительные поля при необходимости
         address_json = json.dumps({
             "Street": street,
             "HouseNum": house,
@@ -261,20 +257,15 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
             "Intercom": intercom
         }, ensure_ascii=False)
 
-    # Объединяем дополнительное описание в комментарий
     comment = order_description if order_description else "тестовый заказ на доставку"
-    
-    # Если заказ "pickup", ставим isPickup True, иначе False
     is_pickup = True if delivery_type == "pickup" else False
-
-    # Преобразуем количество человек в число (по умолчанию 1)
     try:
         persons = int(num_persons)
     except ValueError:
         persons = 1
 
     order_payload = {
-        "product": "delivery",  # Можно менять, если для самовывоза другой тип продукта
+        "product": "delivery",
         "pointId": POINT_ID,
         "comment": comment,
         "customer": {
@@ -290,13 +281,12 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
         "delivery": {
             "addressFull": address_full,
             "addressJSON": address_json,
-            "paymentType": payment_type,  # "card" или "cash"
+            "paymentType": payment_type,
             "persons": persons,
             "isPickup": is_pickup
         }
     }
 
-    # Отправляем JSON запроса в чат (как текст) для отладки
     request_json_text = json.dumps(order_payload, ensure_ascii=False, indent=2)
     await bot.send_message(
         chat_id=user_id,
@@ -332,6 +322,8 @@ async def process_confirm_order(callback_query: types.CallbackQuery):
         text=result_text,
         parse_mode=ParseMode.MARKDOWN
     )
+    # После подтверждения заказа данные удаляются
+    orders_pending.pop(user_id, None)
     await callback_query.answer("Запрос отправлен!", show_alert=True)
 
 
@@ -341,6 +333,8 @@ async def process_cancel_order(callback_query: types.CallbackQuery):
     markup = get_start_reply_markup()
     await callback_query.message.answer("Заказ отменен. Возвращаем в начальное состояние.", reply_markup=markup)
     logging.info(f"Заказ отменен пользователем {callback_query.from_user.id}")
+    # Если заказ отменён, данные также удаляются
+    orders_pending.pop(callback_query.from_user.id, None)
 
 @app.get("/menu")
 async def get_menu():

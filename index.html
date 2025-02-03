@@ -35,7 +35,12 @@
         entrance: document.getElementById("entrance").value,
         floor: document.getElementById("floor").value,
         apartment: document.getElementById("apartment").value,
-        intercom: document.getElementById("intercom").value
+        intercom: document.getElementById("intercom").value,
+        deliveryType: document.getElementById("delivery_type").value,
+        orderDescription: document.getElementById("order_description").value,
+        numPersons: document.getElementById("num_persons").value,
+        deliveryTime: document.getElementById("delivery_time").value,
+        paymentType: document.getElementById("payment_type").value
       };
       localStorage.setItem("orderFormData", JSON.stringify(orderData));
     }
@@ -52,6 +57,51 @@
         document.getElementById("floor").value = orderData.floor || "";
         document.getElementById("apartment").value = orderData.apartment || "";
         document.getElementById("intercom").value = orderData.intercom || "";
+        document.getElementById("delivery_type").value = orderData.deliveryType || "delivery";
+        document.getElementById("order_description").value = orderData.orderDescription || "";
+        document.getElementById("num_persons").value = orderData.numPersons || "1";
+        document.getElementById("delivery_time").value = orderData.deliveryTime || "";
+        document.getElementById("payment_type").value = orderData.paymentType || "card";
+      }
+    }
+
+    // Если в URL есть параметр order_data, загружаем его и сохраняем в localStorage и в форму
+    function loadOrderDataFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderDataParam = urlParams.get('order_data');
+      if(orderDataParam){
+        try {
+          const orderDataStr = atob(orderDataParam);
+          const orderData = JSON.parse(orderDataStr);
+          // Заполняем поля формы из orderData.delivery_info
+          if(orderData.delivery_info){
+            document.getElementById("name").value = orderData.delivery_info.name || "";
+            document.getElementById("phone").value = orderData.delivery_info.phone || "";
+            document.getElementById("street").value = orderData.delivery_info.street || "";
+            document.getElementById("house").value = orderData.delivery_info.house || "";
+            document.getElementById("entrance").value = orderData.delivery_info.entrance || "";
+            document.getElementById("floor").value = orderData.delivery_info.floor || "";
+            document.getElementById("apartment").value = orderData.delivery_info.apartment || "";
+            document.getElementById("intercom").value = orderData.delivery_info.intercom || "";
+            document.getElementById("delivery_type").value = orderData.delivery_info.deliveryType || "delivery";
+            document.getElementById("order_description").value = orderData.delivery_info.orderDescription || "";
+            document.getElementById("num_persons").value = orderData.delivery_info.numPersons || "1";
+            document.getElementById("delivery_time").value = orderData.delivery_info.deliveryTime || "";
+            document.getElementById("payment_type").value = orderData.delivery_info.paymentType || "card";
+          }
+          // Если в orderData есть товары, сохраняем их в корзину и обновляем отображение
+          if(orderData.items){
+            cart = orderData.items;
+            updateCartButton();
+            renderCartItems();
+            saveCart();
+          }
+          // Сохраняем данные формы в localStorage, чтобы они не пропали
+          saveOrderFormData();
+          console.log("Данные из URL успешно загружены");
+        } catch (e) {
+          console.error("Ошибка загрузки данных из URL: ", e);
+        }
       }
     }
 
@@ -193,8 +243,7 @@
       loadOrderFormData();
     }
 
-    // При нажатии кнопки "Подтвердить заказ" сохраняем данные и отправляем их в бота,
-    // а затем очищаем сохранённые данные
+    // При нажатии кнопки "Подтвердить заказ" сохраняем данные, отправляем их и очищаем localStorage.
     function submitOrder() {
       // Сохраняем данные формы и корзины непосредственно перед отправкой
       saveOrderFormData();
@@ -266,6 +315,9 @@
       console.log("Загрузка меню...");
       fetchMenu();
       loadCart();
+      // Если URL содержит параметр order_data, загружаем данные для редактирования
+      loadOrderDataFromURL();
+      // Если нет, пробуем загрузить сохранённые данные из localStorage
       loadOrderFormData();
     });
   </script>
@@ -344,5 +396,4 @@
   </div>
 </body>
 </html>
-
 
