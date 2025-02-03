@@ -144,75 +144,110 @@
 
     // Получение меню с сервера
     async function fetchMenu() {
-      try {
-        const response = await fetch("http://127.0.0.1:8000/menu");
-        const data = await response.json();
-        console.log("Данные меню:", data);
-        if (typeof data === "object" && !Array.isArray(data)) {
-          processMenuData(data);
-        } else {
-          console.error("Ошибка: полученные данные не являются объектом с категориями", data);
-        }
-      } catch (error) {
-        console.error("Ошибка загрузки меню:", error);
-      }
-    }
+  try {
+    console.log('Начало загрузки меню...');
+    const response = await fetch("http://127.0.0.1:8000/menu");
+    console.log('Статус ответа:', response.status);
+    const data = await response.json();
+    console.log("Полученные данные:", data);
+    processMenuData(data);
+  } catch (error) {
+    console.error("Ошибка загрузки меню:", error);
+  }
+}
 
-    function processMenuData(data) {
-      categories = {};
-      for (let categoryId in data) {
-        const category = data[categoryId];
-        categories[categoryId] = {
-          name: category.name,
-          items: category.items || []
-        };
-      }
-      renderCategories();
+function processMenuData(data) {
+  console.log('Обработка данных меню...');
+  if (!data || typeof data !== 'object') {
+    console.error('Некорректные данные меню:', data);
+    return;
+  }
+  
+  categories = {};
+  for (let categoryId in data) {
+    const category = data[categoryId];
+    console.log(`Обработка категории ${categoryId}:`, category);
+    
+    if (!category.items || !Array.isArray(category.items)) {
+      console.error('Некорректные товары в категории:', category);
+      continue;
     }
-
-    function renderCategories() {
-      const categoriesContainer = document.querySelector(".categories");
-      if (!categoriesContainer) {
-        console.error("Элемент .categories не найден в DOM");
-        return;
-      }
-      categoriesContainer.innerHTML = "";
-      for (let categoryId in categories) {
-        const category = categories[categoryId];
-        const categoryButton = document.createElement("button");
-        categoryButton.innerText = category.name;
-        categoryButton.onclick = () => showItems(categoryId);
-        categoriesContainer.appendChild(categoryButton);
-      }
-    }
-
-    function showItems(categoryId) {
-      const itemsContainer = document.getElementById("items");
-      if (!itemsContainer) {
-        console.error("Элемент #items не найден в DOM");
-        return;
-      }
-      itemsContainer.innerHTML = "";
-      const category = categories[categoryId];
-      if (!category || !category.items) {
-        console.error("Категория или товары не найдены");
-        return;
-      }
-      category.items.forEach((item) => {
-        const itemCard = document.createElement("div");
-        itemCard.className = "item-card";
-        // Если поле externalId существует, используем его, иначе обычный id
-        const externalId = item.externalId ? item.externalId : item.id;
-        itemCard.innerHTML = `
-          <img src="${item.image}" alt="${item.name}" onclick="showItemDetails('${categoryId}', '${item.name}')">
-          <h3>${item.name}</h3>
-          <p>${item.price}₽</p>
-          <button class="add-to-cart" onclick="addToCart('${externalId}', '${item.name}', ${item.price})">Добавить</button>
-        `;
-        itemsContainer.appendChild(itemCard);
-      });
-    }
-
+    
+    categories[categoryId] = {
+      name: category.name,
+      items: category.items
+    };
+  }
+  renderCategories();
+}
+function renderCategories() {
+  const categoriesContainer = document.querySelector("#categories");
+  console.log('Контейнер категорий:', categoriesContainer);
+  
+  if (!categoriesContainer) {
+    console.error("Элемент #categories не найден!");
+    return;
+  }
+  
+  categoriesContainer.innerHTML = "";
+  
+  for (let categoryId in categories) {
+    const category = categories[categoryId];
+    console.log(`Создание кнопки для категории ${categoryId}`);
+    
+    const categoryButton = document.createElement("button");
+    categoryButton.className = "btn btn-outline-secondary me-2 mb-2";
+    categoryButton.innerText = category.name;
+    categoryButton.onclick = () => {
+      console.log(`Выбрана категория ${categoryId}`);
+      showItems(categoryId);
+    };
+    
+    categoriesContainer.appendChild(categoryButton);
+  }
+}function showItems(categoryId) {
+  console.log(`Показ товаров для категории ${categoryId}`);
+  const itemsContainer = document.getElementById("items");
+  console.log('Контейнер товаров:', itemsContainer);
+  
+  if (!itemsContainer) {
+    console.error("Элемент #items не найден!");
+    return;
+  }
+  
+  itemsContainer.innerHTML = "";
+  const category = categories[categoryId];
+  
+  if (!category) {
+    console.error(`Категория ${categoryId} не найдена!`);
+    return;
+  }
+  
+  console.log(`Товаров в категории: ${category.items.length}`);
+  
+  category.items.forEach((item) => {
+    console.log('Добавление товара:', item);
+    const col = document.createElement("div");
+    col.className = "col-12 col-md-6 col-lg-4";
+    
+    const card = document.createElement("div");
+    card.className = "card product-card mb-3";
+    card.innerHTML = `
+      <img src="${item.image}" class="card-img-top product-image" alt="${item.name}">
+      <div class="card-body">
+        <h5 class="card-title">${item.name}</h5>
+        <p class="card-text">${item.price}₽</p>
+        <button class="btn btn-primary" 
+          onclick="addToCart('${item.externalId || item.id}', '${item.name}', ${item.price})">
+          Добавить
+        </button>
+      </div>
+    `;
+    
+    col.appendChild(card);
+    itemsContainer.appendChild(col);
+  });
+}
     // Функция addToCart сохраняет externalId товара
     function addToCart(itemExternalId, itemName, itemPrice) {
       let cartItem = cart.find((i) => i.externalId === itemExternalId);
