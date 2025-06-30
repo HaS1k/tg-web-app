@@ -1,512 +1,528 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Кофейня THE CUP</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Кофейня THE CUP</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
-    <style>
-        .product-card {
-            transition: transform 0.2s;
-            border: 1px solid #f0f0f0;
-        }
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-        .product-image {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 0;
+    }
 
-        .cart-badge {
-            position: relative;
-            top: -2px;
-            font-size: 0.75em;
-        }
-        #cart-content,
-        #order-form {
-            display: none;
-        }
-    </style>
+    .coffee-bg {
+      background: #f2e9e4;
+    }
 
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 
-    <script>
-        let cart = [];
-        let categories = {};
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем Mini App на весь экран
+    .coffee-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4a2f23;
+    }
 
-        // Функции для сохранения и загрузки данных корзины
-        function saveCart() {
-            localStorage.setItem("cartData", JSON.stringify(cart));
-        }
+    .coffee-btn {
+      background: #4a2f23;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-weight: 500;
+    }
+    .coffee-btn:hover {
+      background: #3b231a;
+    }
 
-        function loadCart() {
-            const storedCart = localStorage.getItem("cartData");
-            if (storedCart) {
-                cart = JSON.parse(storedCart);
-                updateCartButton();
-            }
-        }
+    .product-card {
+      border: 1px solid #e0d4ce;
+      border-radius: 8px;
+      background: #fff5f0;
+      transition: transform 0.2s;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
 
-        // Функции для сохранения и загрузки данных формы заказа (без новых полей, они обрабатываются при отправке)
-        function saveOrderFormData() {
-            const orderData = {
-                name: document.getElementById("name").value,
-                phone: document.getElementById("phone").value,
-                street: document.getElementById("street").value,
-                house: document.getElementById("house").value,
-                entrance: document.getElementById("entrance").value,
-                floor: document.getElementById("floor").value,
-                apartment: document.getElementById("apartment").value,
-                intercom: document.getElementById("intercom").value,
-                deliveryType: document.getElementById("delivery_type").value,
-                orderDescription: document.getElementById("order_description").value,
-                numPersons: document.getElementById("num_persons").value,
-                deliveryTime: document.getElementById("delivery_time").value,
-                paymentType: document.getElementById("payment_type").value
-            };
-            localStorage.setItem("orderFormData", JSON.stringify(orderData));
-        }
+    .product-image {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
 
-        function loadOrderFormData() {
-            const savedData = localStorage.getItem("orderFormData");
-            if (savedData) {
-                const orderData = JSON.parse(savedData);
-                document.getElementById("name").value = orderData.name || "";
-                document.getElementById("phone").value = orderData.phone || "";
-                document.getElementById("street").value = orderData.street || "";
-                document.getElementById("house").value = orderData.house || "";
-                document.getElementById("entrance").value = orderData.entrance || "";
-                document.getElementById("floor").value = orderData.floor || "";
-                document.getElementById("apartment").value = orderData.apartment || "";
-                document.getElementById("intercom").value = orderData.intercom || "";
-                document.getElementById("delivery_type").value = orderData.deliveryType || "delivery";
-                document.getElementById("order_description").value = orderData.orderDescription || "";
-                document.getElementById("num_persons").value = orderData.numPersons || "1";
-                document.getElementById("delivery_time").value = orderData.deliveryTime || "";
-                document.getElementById("payment_type").value = orderData.paymentType || "card";
-            }
-        }
+    .cart-item {
+      background: #fffaf6;
+      border: 1px solid #e0d4ce;
+      border-radius: 5px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
 
-        // Если в URL есть параметр order_data, загружаем его и сохраняем в localStorage и в форму
+    .cart-item .btn {
+      padding: 2px 6px;
+      font-size: 0.9rem;
+    }
 
-        // Если в URL есть параметр order_data, загружаем его и сохраняем в localStorage и в форму
-        function loadOrderDataFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const orderDataParam = urlParams.get('order_data');
-            if (orderDataParam) {
-                try {
-                    const orderDataStr = atob(orderDataParam);
-                    const orderData = JSON.parse(orderDataStr);
-                    // Заполняем поля формы из orderData.delivery_info
-                    if (orderData.delivery_info) {
-                        document.getElementById("name").value = orderData.delivery_info.name || "";
-                        document.getElementById("phone").value = orderData.delivery_info.phone || "";
-                        document.getElementById("street").value = orderData.delivery_info.street || "";
-                        document.getElementById("house").value = orderData.delivery_info.house || "";
-                        document.getElementById("entrance").value = orderData.delivery_info.entrance || "";
-                        document.getElementById("floor").value = orderData.delivery_info.floor || "";
-                        document.getElementById("apartment").value = orderData.delivery_info.apartment || "";
-                        document.getElementById("intercom").value = orderData.delivery_info.intercom || "";
-                        document.getElementById("delivery_type").value = orderData.delivery_info.deliveryType || "delivery";
-                        document.getElementById("order_description").value = orderData.delivery_info.orderDescription || "";
-                        document.getElementById("num_persons").value = orderData.delivery_info.numPersons || "1";
-                        document.getElementById("delivery_time").value = orderData.delivery_info.deliveryTime || "";
-                        document.getElementById("payment_type").value = orderData.delivery_info.paymentType || "card";
-                    }
-                    // Если в orderData есть товары, сохраняем их в корзину и обновляем отображение
-                    if (orderData.items) {
-                        cart = orderData.items;
-                        updateCartButton();
-                        renderCartItems();
-                        saveCart();
-                    }
-                    // Сохраняем данные формы в localStorage, чтобы они не пропали
-                    saveOrderFormData();
-                    console.log("Данные из URL успешно загружены");
-                    // После загрузки удаляем параметры из URL, чтобы дальнейшие изменения не перезаписывались
-                    history.replaceState(null, "", window.location.pathname);
-                } catch (e) {
-                    console.error("Ошибка загрузки данных из URL: ", e);
-                }
-            }
-        }
+    .cart-total {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-top: 10px;
+    }
 
-        // Остальной код остается без изменений...
-        document.addEventListener("DOMContentLoaded", function () {
-            console.log("Загрузка меню...");
-            fetchMenu();
-            loadCart();
-            // Если URL содержит параметр order_data, загружаем данные для редактирования
-            loadOrderDataFromURL();
-            // Если нет, пробуем загрузить сохранённые данные из localStorage
-            loadOrderFormData();
-        });
+    .form-section {
+      background: #fffaf6;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
 
+    .form-section label {
+      font-weight: 500;
+    }
 
-
-        // Получение меню с сервера
-        async function fetchMenu() {
-            try {
-                console.log('Начало загрузки меню...');
-                const response = await fetch("http://127.0.0.1:8000/menu");
-                console.log('Статус ответа:', response.status);
-                const data = await response.json();
-                console.log("Полученные данные:", data);
-                processMenuData(data);
-            } catch (error) {
-                console.error("Ошибка загрузки меню:", error);
-            }
-        }
-
-        function processMenuData(data) {
-            console.log('Обработка данных меню...');
-            if (!data || typeof data !== 'object') {
-                console.error('Некорректные данные меню:', data);
-                return;
-            }
-
-            categories = {};
-            for (let categoryId in data) {
-                const category = data[categoryId];
-                console.log(`Обработка категории ${categoryId}:`, category);
-
-                if (!category.items || !Array.isArray(category.items)) {
-                    console.error('Некорректные товары в категории:', category);
-                    continue;
-                }
-
-                categories[categoryId] = {
-                    name: category.name,
-                    items: category.items
-                };
-            }
-            renderCategories();
-        }
-        function renderCategories() {
-            const categoriesContainer = document.querySelector("#categories");
-            console.log('Контейнер категорий:', categoriesContainer);
-
-            if (!categoriesContainer) {
-                console.error("Элемент #categories не найден!");
-                return;
-            }
-
-            categoriesContainer.innerHTML = "";
-
-            for (let categoryId in categories) {
-                const category = categories[categoryId];
-                console.log(`Создание кнопки для категории ${categoryId}`);
-
-                const categoryButton = document.createElement("button");
-                categoryButton.className = "btn btn-outline-secondary me-2 mb-2";
-                categoryButton.innerText = category.name;
-                categoryButton.onclick = () => {
-                    console.log(`Выбрана категория ${categoryId}`);
-                    showItems(categoryId);
-                };
-
-                categoriesContainer.appendChild(categoryButton);
-            }
-        } function showItems(categoryId) {
-            console.log(`Показ товаров для категории ${categoryId}`);
-            const itemsContainer = document.getElementById("items");
-            console.log('Контейнер товаров:', itemsContainer);
-
-            if (!itemsContainer) {
-                console.error("Элемент #items не найден!");
-                return;
-            }
-
-            itemsContainer.innerHTML = "";
-            const category = categories[categoryId];
-
-            if (!category) {
-                console.error(`Категория ${categoryId} не найдена!`);
-                return;
-            }
-
-            console.log(`Товаров в категории: ${category.items.length}`);
-
-            category.items.forEach((item) => {
-                console.log('Добавление товара:', item);
-                const col = document.createElement("div");
-                col.className = "col-12 col-md-6 col-lg-4";
-
-                const card = document.createElement("div");
-                card.className = "card product-card mb-3";
-                card.innerHTML = `
-          <img src="${item.image}" class="card-img-top product-image" alt="${item.name}">
-          <div class="card-body">
-            <h5 class="card-title">${item.name}</h5>
-            <p class="card-text">${item.price}₽</p>
-            <button class="btn btn-primary"
-              onclick="addToCart('${item.externalId || item.id}', '${item.name}', ${item.price})">
-              Добавить
-            </button>
-          </div>
-        `;
-
-                col.appendChild(card);
-                itemsContainer.appendChild(col);
-            });
-        }
-        // Функция addToCart сохраняет externalId товара
-        function addToCart(itemExternalId, itemName, itemPrice) {
-            let cartItem = cart.find((i) => i.externalId === itemExternalId);
-            if (cartItem) {
-                cartItem.quantity++;
-            } else {
-                cart.push({ externalId: itemExternalId, name: itemName, price: itemPrice, quantity: 1 });
-            }
-            updateCartButton();
-            // Сохраняем корзину сразу, чтобы данные были актуальны до подтверждения заказа
-            saveCart();
-        }
-
-        function updateCartButton() {
-            const cartBtn = document.getElementById("cart-button");
-            if (cartBtn) {
-                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-                cartBtn.innerText = `🛒 Корзина (${totalItems})`;
-            }
-        }
-        function showCart() {
-            document.getElementById("main-content").style.display = "none";
-            document.getElementById("cart-content").style.display = "block";
-            document.getElementById("order-form").style.display = "none"; // Скрываем форму, если открыта
-            document.getElementById("cart-button").style.display = "none";
-            renderCartItems();
-        }
-
-        function renderCartItems() {
-            const cartItemsContainer = document.getElementById("cart-items");
-            if (cartItemsContainer) {
-                cartItemsContainer.innerHTML = "";
-                if (cart.length === 0) {
-                    cartItemsContainer.innerHTML = "<p>Корзина пуста</p>";
-                } else {
-                    let total = 0;
-                    cart.forEach((item) => {
-                        total += item.price * item.quantity;
-                        const cartItem = document.createElement("div");
-                        cartItem.className = "cart-item";
-                        cartItem.innerHTML = `
-                  <p>${item.name} - ${item.price}₽ x ${item.quantity}</p>
-                  <button onclick="removeFromCart('${item.externalId}')">❌</button>
-                `;
-                        cartItemsContainer.appendChild(cartItem);
-                    });
-                    // Выводим итоговую сумму
-                    const totalDiv = document.createElement("div");
-                    totalDiv.className = "cart-total";
-                    totalDiv.innerHTML = `<p>Итоговая сумма: <strong>${total}₽</strong></p>`;
-                    cartItemsContainer.appendChild(totalDiv);
-                }
-            }
-        }
-
-        function removeFromCart(itemExternalId) {
-            cart = cart.filter((i) => i.externalId !== itemExternalId);
-            updateCartButton();
-            saveCart();
-            renderCartItems();
-        }
-
-        function showOrderForm() {
-            document.getElementById("cart-content").style.display = "none";
-            document.getElementById("order-form").style.display = "block";
-            loadOrderFormData();
-        }
-
-        // При нажатии кнопки "Подтвердить заказ" сохраняем данные, отправляем их и очищаем localStorage.
-        function submitOrder() {
-            // Сохраняем данные формы и корзины непосредственно перед отправкой
-            saveOrderFormData();
-            saveCart();
-
-            const name = document.getElementById("name").value;
-            const phone = document.getElementById("phone").value;
-            const street = document.getElementById("street").value;
-            const house = document.getElementById("house").value;
-            const entrance = document.getElementById("entrance").value;
-            const floor = document.getElementById("floor").value;
-            const apartment = document.getElementById("apartment").value;
-            const intercom = document.getElementById("intercom").value;
-
-            // Новые поля
-            const deliveryType = document.getElementById("delivery_type").value;
-            const orderDescription = document.getElementById("order_description").value;
-            const numPersons = document.getElementById("num_persons").value;
-            const deliveryTime = document.getElementById("delivery_time").value;
-            const paymentType = document.getElementById("payment_type").value;
-
-            if (!name || !phone || !street || !house || !entrance || !floor || !apartment || !intercom ||
-                !deliveryType || !numPersons || !deliveryTime || !paymentType) {
-                alert("Пожалуйста, заполните все обязательные поля!");
-                return;
-            }
-
-            const order = {
-                user_id: tg.initDataUnsafe.user?.id || "unknown",
-                // Передаём товары с externalId
-                items: cart.map((item) => ({ externalId: item.externalId, price: item.price, quantity: item.quantity })),
-                delivery_info: {
-                    name,
-                    phone,
-                    street,
-                    house,
-                    entrance,
-                    floor,
-                    apartment,
-                    intercom,
-                    deliveryType,       // Доставка или самовывоз
-                    orderDescription,   // Дополнительное описание заказа
-                    numPersons,         // Количество человек
-                    deliveryTime,       // Время доставки
-                    paymentType         // Способ оплаты
-                }
-            };
-
-            // Отправляем данные заказа боту
-            tg.sendData(JSON.stringify(order));
-
-            // После отправки очищаем сохранённые данные
-            localStorage.removeItem("cartData");
-            localStorage.removeItem("orderFormData");
-
-            tg.close();
-        }
-
-        function backToCart() {
-            document.getElementById("order-form").style.display = "none";
-            document.getElementById("cart-content").style.display = "block";
-        }
-
-        function showItemDetails(categoryId, itemName) {
-            alert(`Детали товара: ${itemName}`);
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            console.log("Загрузка меню...");
-            fetchMenu();
-            loadCart();
-            // Если URL содержит параметр order_data, загружаем данные для редактирования
-            loadOrderDataFromURL();
-            // Если нет, пробуем загрузить сохранённые данные из localStorage
-            loadOrderFormData();
-        });
-    </script>
+    .d-none {
+      display: none !important;
+    }
+  </style>
 </head>
-<body class="bg-light">
-    <div class="container py-3">
-        <!-- Главное меню -->
-        <div id="main-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h4 mb-0">🍔 Наше меню</h1>
-                <button id="cart-button" class="btn btn-outline-primary position-relative" onclick="showCart()">
-                    🛒 Корзина
-                    <span id="cart-counter" class="cart-badge badge bg-danger">0</span>
-                </button>
-            </div>
+<body class="coffee-bg">
+  <div class="container py-3">
+    <header class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="coffee-title">☕ THE CUP</h1>
+      <button id="cart-button" class="btn coffee-btn">
+        🛒 <span id="cart-count">0</span>
+      </button>
+    </header>
 
-            <div id="categories" class="d-flex flex-wrap gap-2 mb-4"></div>
-            <div id="items" class="row g-3"></div>
-        </div>
-
-        <!-- Корзина -->
-        <div id="cart-content" style="display: none;">
-            <div class="d-flex align-items-center mb-4">
-                <button class="btn btn-outline-secondary me-3" onclick="document.getElementById('main-content').style.display='block'; document.getElementById('cart-content').style.display='none'; document.getElementById('cart-button').style.display = 'block' ">←</button>
-                <h2 class="h5 mb-0">Ваша корзина</h2>
-            </div>
-
-            <div id="cart-items" class="mb-4"></div>
-
-            <div class="d-grid gap-2">
-                <button class="btn btn-success" onclick="showOrderForm()">
-                    🚀 Оформить заказ
-                </button>
-            </div>
-        </div>
-
-        <!-- Форма заказа -->
-        <div id="order-form" style="display: none;">
-            <div class="d-flex align-items-center mb-4">
-                <button class="btn btn-outline-secondary me-3" onclick="backToCart()">
-                    ←
-                </button>
-                <h2 class="h5 mb-0">Оформление заказа</h2>
-            </div>
-
-            <form onsubmit="event.preventDefault(); submitOrder();">
-                <div class="mb-3">
-                    <label class="form-label">Контактные данные</label>
-                    <input type="text" class="form-control mb-2" id="name" placeholder="Имя" required>
-                    <input type="tel" class="form-control" id="phone" placeholder="Телефон" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Адрес доставки</label>
-                    <div class="row g-2 mb-2">
-                        <div class="col-8">
-                            <input type="text" class="form-control" id="street" placeholder="Улица" required>
-                        </div>
-                        <div class="col-4">
-                            <input type="text" class="form-control" id="house" placeholder="Дом" required>
-                        </div>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-3">
-                            <input type="text" class="form-control" id="entrance" placeholder="Подъезд">
-                        </div>
-                        <div class="col-3">
-                            <input type="text" class="form-control" id="floor" placeholder="Этаж">
-                        </div>
-                        <div class="col-3">
-                            <input type="text" class="form-control" id="apartment" placeholder="Квартира">
-                        </div>
-                        <div class="col-3">
-                            <input type="text" class="form-control" id="intercom" placeholder="Домофон">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Детали заказа</label>
-                    <select class="form-select mb-2" id="delivery_type" required>
-                        <option value="delivery">Доставка</option>
-                        <option value="pickup">Самовывоз</option>
-                    </select>
-
-                    <input type="time" class="form-control mb-2" id="delivery_time" required>
-
-                    <select class="form-select mb-2" id="payment_type" required>
-                        <option value="card">Карта</option>
-                        <option value="cash">Наличные</option>
-                    </select>
-
-                    <input type="number" class="form-control mb-2" id="num_persons" min="1" placeholder="Количество персон" required>
-
-                    <textarea class="form-control" id="order_description" rows="2" placeholder="Комментарий к заказу"></textarea>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success">✅ Подтвердить заказ</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="backToCart()">
-                        Назад в корзину
-                    </button>
-                </div>
-            </form>
-        </div>
+    <!-- Основной экран -->
+    <div id="main-content">
+      <div id="categories" class="mb-3"></div>
+      <div id="items" class="row g-3"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Оригинальный JavaScript остается без изменений -->
+    <!-- Корзина -->
+    <div id="cart-content" class="d-none">
+      <button class="btn coffee-btn mb-3" onclick="backToMain()">← Назад</button>
+      <div id="cart-items"></div>
+      <button class="btn coffee-btn mt-3" onclick="showOrderForm()">Оформить заказ</button>
+    </div>
+
+    <!-- Форма заказа -->
+    <div id="order-form" class="d-none">
+      <button class="btn coffee-btn mb-3" onclick="backToCart()">← Назад</button>
+      <form onsubmit="submitOrder(); return false;">
+        <div class="form-section mb-3">
+          <label for="input-name" class="form-label">ФИО</label>
+          <input type="text" id="input-name" class="form-control" placeholder="Иван Иванов" required />
+        </div>
+
+        <div class="form-section mb-3">
+          <label for="input-phone" class="form-label">Телефон</label>
+          <input type="tel" id="input-phone" class="form-control" placeholder="+7 (___) ___-__-__" required />
+        </div>
+
+        <div class="form-section mb-3">
+          <label for="input-street" class="form-label">Адрес доставки</label>
+          <div class="row g-2">
+            <div class="col-8">
+              <input type="text" id="input-street" class="form-control" placeholder="Улица" required />
+            </div>
+            <div class="col-4">
+              <input type="text" id="input-house" class="form-control" placeholder="Дом" required />
+            </div>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col-3">
+              <input type="text" id="input-entrance" class="form-control" placeholder="Подъезд" />
+            </div>
+            <div class="col-3">
+              <input type="text" id="input-floor" class="form-control" placeholder="Этаж" />
+            </div>
+            <div class="col-3">
+              <input type="text" id="input-apartment" class="form-control" placeholder="Квартира" />
+            </div>
+            <div class="col-3">
+              <input type="text" id="input-intercom" class="form-control" placeholder="Домофон" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section mb-3">
+          <label class="form-label">Количество персон</label>
+          <input type="number" id="input-persons" class="form-control" min="1" value="1" required />
+        </div>
+
+        <div class="form-section mb-3">
+          <label for="input-time" class="form-label">Время доставки</label>
+          <input type="time" id="input-time" class="form-control" required />
+        </div>
+
+        <div class="form-section mb-3">
+          <label class="form-label">Способ оплаты</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="payment" id="pay-card" value="card" checked />
+            <label class="form-check-label" for="pay-card">Карта</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="payment" id="pay-cash" value="cash" />
+            <label class="form-check-label" for="pay-cash">Наличные</label>
+          </div>
+          <div id="change-container" class="mt-2" style="display: none;">
+            <input type="text" id="input-change" class="form-control" placeholder="Сдача с" />
+          </div>
+        </div>
+
+        <div class="form-section mb-3">
+          <label for="textarea-comment" class="form-label">Комментарий к заказу</label>
+          <textarea id="textarea-comment" class="form-control" rows="2" placeholder="Дополнительно..."></textarea>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn coffee-btn">✅ Подтвердить заказ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Контейнер для модального окна товара -->
+  <div id="product-modal-container"></div>
+
+  <script>
+    // Инициализация Telegram WebApp
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // API_BASE URL
+    const API_BASE = "http://127.0.0.1:8000";
+
+    let cart = [];
+    let categories = {};
+    let currentItem = null;
+
+    // Загружаем шаблон модалки
+    fetch('components/product-modal.html')
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById('product-modal-container').innerHTML = html;
+        initModalLogic();
+      });
+
+    // При полной загрузке документа
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1) Восстанавливаем корзину
+      cart = JSON.parse(localStorage.getItem('cartData') || '[]');
+      updateCartCount();
+
+      // 2) Привязываем кнопку корзины
+      const cartBtn = document.getElementById('cart-button');
+      if (cartBtn) cartBtn.addEventListener('click', showCart);
+
+      // 3) Переключение поля «Сдача с»
+      document.getElementById('pay-cash').addEventListener('change', toggleChange);
+      document.getElementById('pay-card').addEventListener('change', toggleChange);
+
+      // 4) Загружаем меню: сначала из URL, иначе – по fetch
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('menu_data')) {
+        try {
+          categories = JSON.parse(atob(params.get('menu_data')));
+          processMenuData(categories);
+        } catch (e) {
+          console.error('Не удалось декодировать menu_data:', e);
+          fetchMenu();
+        }
+      } else {
+        fetchMenu();
+      }
+    });
+
+    // Показ/скрытие поля «Сдача с»
+    function toggleChange() {
+      document.getElementById('change-container').style.display =
+        document.getElementById('pay-cash').checked ? 'block' : 'none';
+    }
+
+    // Загрузка меню с бэкенда
+    async function fetchMenu() {
+      try {
+        console.log('Начало загрузки меню...');
+        const resp = await fetch(`${API_BASE}/menu`, { mode: 'cors' });
+        console.log('Статус ответа:', resp.status);
+        if (!resp.ok) throw new Error(`Ошибка ${resp.status}`);
+        const data = await resp.json();
+        processMenuData(data);
+      } catch (error) {
+        console.error('Ошибка fetchMenu:', error);
+        alert('Не удалось загрузить меню с сервера');
+      }
+    }
+
+    // Обработка данных меню
+    function processMenuData(data) {
+      categories = data;
+      renderCategories();
+      const first = Object.keys(categories)[0];
+      if (first) showItems(first);
+    }
+
+    // Рисуем кнопки категорий
+    function renderCategories() {
+      const ctr = document.getElementById('categories');
+      ctr.innerHTML = '';
+      for (let cid in categories) {
+        const btn = document.createElement('button');
+        btn.className = 'btn coffee-btn me-2 mb-2';
+        btn.innerText = categories[cid].name;
+        btn.addEventListener('click', () => showItems(cid));
+        ctr.appendChild(btn);
+      }
+    }
+
+    // Показ товаров выбранной категории
+    function showItems(cid) {
+      const ctr = document.getElementById('items');
+      ctr.innerHTML = '';
+      categories[cid].items.forEach(item => {
+        const col = document.createElement('div');
+        col.className = 'col-12 col-sm-6 col-md-4';
+        col.innerHTML = `
+          <div class="product-card">
+            <img 
+              src="${item.image || 'images/placeholder.png'}" 
+              class="product-image" 
+              alt="${item.name}"
+              onerror="this.src='images/placeholder.png'"
+            />
+            <div class="p-2">
+              <h6>${item.name}</h6>
+              <p>${item.price} ₽</p>
+              <button class="btn coffee-btn"
+                      onclick="openModal('${cid}', '${item.externalId || item.id}')">
+                Подробнее
+              </button>
+            </div>
+          </div>
+        `;
+        ctr.appendChild(col);
+      });
+    }
+
+    // Открываем модалку с подробностями товара
+    function openModal(categoryId, extId) {
+      const item = categories[categoryId].items
+        .find(i => String(i.externalId || i.id) === extId);
+      if (!item) return;
+      currentItem = item;
+      document.getElementById('modal-title').innerText = item.name;
+      document.getElementById('modal-image').src = item.image || 'images/placeholder.png';
+      document.getElementById('modal-desc').innerHTML = item.description || 'Описание недоступно';
+      renderModifiers(item.modifiers || []);
+      new bootstrap.Modal('#productModal').show();
+    }
+
+    // Рендерим модификаторы в модалке
+    function renderModifiers(mods) {
+      const ctr = document.getElementById('modal-modifiers');
+      ctr.innerHTML = '';
+      mods.forEach(group => {
+        const div = document.createElement('div');
+        div.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
+        group.options.forEach(opt => {
+          const id = `mod-${group.id}-${opt.id}`;
+          div.innerHTML += `
+            <div class="form-check">
+              <input class="form-check-input" 
+                     type="${group.type === 'Single' ? 'radio' : 'checkbox'}" 
+                     name="mod-${group.id}" 
+                     id="${id}" 
+                     value="${opt.id}">
+              <label class="form-check-label" for="${id}">
+                ${opt.name} (+${opt.cost}₽)
+              </label>
+            </div>
+          `;
+        });
+        ctr.appendChild(div);
+      });
+    }
+
+    // Привязываем кнопку «Добавить в корзину» в модалке
+    function initModalLogic() {
+      document.getElementById('modal-add-btn').onclick = () => {
+        const selected = [];
+        (currentItem.modifiers || []).forEach(group => {
+          document.getElementsByName(`mod-${group.id}`).forEach(inp => {
+            if (inp.checked) selected.push(inp.value);
+          });
+        });
+        addToCart(currentItem, selected);
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+      };
+    }
+
+    // Добавляем товар в корзину
+    function addToCart(item, modifiers = []) {
+      const key = (item.externalId || item.id) + modifiers.join(',');
+      let ci = cart.find(i => i.key === key);
+      if (ci) ci.quantity++;
+      else cart.push({
+        key,
+        externalId: item.externalId || item.id,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        modifiers
+      });
+      localStorage.setItem('cartData', JSON.stringify(cart));
+      updateCartCount();
+    }
+
+    // Обновляем счётчик корзины
+    function updateCartCount() {
+      const cnt = cart.reduce((sum, i) => sum + i.quantity, 0);
+      document.getElementById('cart-count').innerText = cnt;
+    }
+
+    // Показ и скрытие секций
+    function showCart() {
+      document.getElementById('main-content').classList.add('d-none');
+      document.getElementById('order-form').classList.add('d-none');
+      document.getElementById('cart-content').classList.remove('d-none');
+      renderCartItems();
+    }
+    function backToMain() {
+      document.getElementById('cart-content').classList.add('d-none');
+      document.getElementById('order-form').classList.add('d-none');
+      document.getElementById('main-content').classList.remove('d-none');
+    }
+    function showOrderForm() {
+      document.getElementById('cart-content').classList.add('d-none');
+      document.getElementById('main-content').classList.add('d-none');
+      document.getElementById('order-form').classList.remove('d-none');
+    }
+    function backToCart() {
+      document.getElementById('order-form').classList.add('d-none');
+      document.getElementById('cart-content').classList.remove('d-none');
+    }
+
+    // Рисуем содержимое корзины с возможностью менять кол-во/удалять
+    function renderCartItems() {
+      const ctr = document.getElementById('cart-items');
+      ctr.innerHTML = '';
+      if (cart.length === 0) {
+        ctr.innerHTML = '<p>Корзина пуста</p>';
+        return;
+      }
+      let total = 0;
+      cart.forEach((item, idx) => {
+        total += item.price * item.quantity;
+        const div = document.createElement('div');
+        div.className = 'cart-item d-flex justify-content-between align-items-center mb-2';
+        div.innerHTML = `
+          <span>${item.name}</span>
+          <div class="d-flex align-items-center">
+            <button class="btn btn-sm btn-outline-secondary me-2" onclick="decrementQuantity(${idx})">−</button>
+            <span>${item.quantity}</span>
+            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="incrementQuantity(${idx})">+</button>
+            <span class="mx-3">${item.price * item.quantity}₽</span>
+            <button class="btn btn-sm btn-danger" onclick="removeFromCart(${idx})">×</button>
+          </div>
+        `;
+        ctr.appendChild(div);
+      });
+      ctr.insertAdjacentHTML('beforeend',
+        `<div class="cart-total"><strong>Итого: ${total}₽</strong></div>`
+      );
+    }
+
+    function incrementQuantity(i) {
+      cart[i].quantity++;
+      saveCartState();
+    }
+    function decrementQuantity(i) {
+      if (cart[i].quantity > 1) cart[i].quantity--;
+      else cart.splice(i, 1);
+      saveCartState();
+    }
+    function removeFromCart(i) {
+      cart.splice(i, 1);
+      saveCartState();
+    }
+    function saveCartState() {
+      localStorage.setItem('cartData', JSON.stringify(cart));
+      renderCartItems();
+      updateCartCount();
+    }
+
+    // Отправка заказа боту
+    function submitOrder() {
+      // Считываем поля
+      const delivery_info = {
+        name:         document.getElementById('input-name').value.trim(),
+        phone:        document.getElementById('input-phone').value.trim(),
+        street:       document.getElementById('input-street').value.trim(),
+        house:        document.getElementById('input-house').value.trim(),
+        entrance:     document.getElementById('input-entrance').value.trim(),
+        floor:        document.getElementById('input-floor').value.trim(),
+        apartment:    document.getElementById('input-apartment').value.trim(),
+        intercom:     document.getElementById('input-intercom').value.trim(),
+        numPersons:   document.getElementById('input-persons').value,
+        deliveryTime: document.getElementById('input-time').value,
+        paymentType:  document.querySelector('input[name="payment"]:checked').value,
+        changeFrom:   document.getElementById('input-change').value.trim() || null,
+        comment:      document.getElementById('textarea-comment').value.trim()
+      };
+
+      // Проверяем обязательные поля
+      if (!delivery_info.name || !delivery_info.phone ||
+          !delivery_info.street || !delivery_info.house ||
+          !delivery_info.deliveryTime) {
+        alert('Пожалуйста, заполните все обязательные поля.');
+        return;
+      }
+      if (cart.length === 0) {
+        alert('Ваша корзина пуста.');
+        return;
+      }
+
+      // Формируем заказ
+      const order = {
+        items: cart.map(i => ({
+          externalId: i.externalId,
+          name:       i.name,
+          price:      i.price,
+          quantity:   i.quantity,
+          modifiers:  i.modifiers
+        })),
+        delivery_info
+      };
+
+      // Отправляем данные в бота
+      tg.sendData(JSON.stringify(order));
+
+      // Очищаем локальные данные
+      localStorage.removeItem('cartData');
+
+      tg.close();
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
