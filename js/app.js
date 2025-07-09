@@ -401,16 +401,13 @@ function submitOrder() {
 
   // 3) Формируем итоговый объект
   const order = {
-    items: cart.map(i => {
-      const modsSum = i.modifiers.reduce((s, m) => s + m.cost, 0);
-      return {
-        externalId: i.externalId,
-        name:       i.name,
-        price:      i.price + modsSum,       // <--- сюда
-        quantity:   i.quantity,
-        modifiers:  i.modifiers
-      };
-    }),
+ items: cart.map(i => ({
+     externalId: i.externalId,
+     name:       i.name,
+     price:      i.price,                // теперь только базовая цена
+     quantity:   i.quantity,
+     modifiers:  i.modifiers           // модификаторы передаются отдельным массивом
+    })),
     delivery_info: info
   };
   console.log("   order payload:", order);
