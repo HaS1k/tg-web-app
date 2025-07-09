@@ -2,27 +2,30 @@
 
 // 1) Подготовка инициализации после полной загрузки страницы
 document.addEventListener('DOMContentLoaded', async () => {
-  // Загрузить шаблон модального окна и привязать логику
+  console.log('DOMContentLoaded — старт инициализации');
   await loadModalTemplate();
+  console.log('Шаблон модалки загружен');
 
-  // Инициализировать Telegram WebApp
   const tg = window.Telegram.WebApp;
   tg.expand();
+  console.log('Telegram WebApp расширен');
 
-  // Восстановить корзину и обновить счётчик
   loadCart();
+  console.log('Корзина загружена:', cart);
+
   bindCartButton();
   bindPaymentToggle();
 
-  // Загрузить и отрисовать меню
   await fetchMenu();
+  console.log('Меню загружено:', categories);
 });
 
 // 2) Загрузка и инициализация модалки
 async function loadModalTemplate() {
+  console.log('loadModalTemplate — запрос components/product-modal.html');
   const html = await fetch('components/product-modal.html').then(r => r.text());
   document.getElementById('product-modal-container').innerHTML = html;
-  // После вставки в DOM — привязать кнопку «Добавить в корзину»
+  console.log('Модалка вставлена в DOM');
   document.getElementById('modal-add-btn')
     .addEventListener('click', onModalAdd);
 }
@@ -35,14 +38,25 @@ let currentItem = null;
 
 // 4) Привязка кнопки корзины
 function bindCartButton() {
+  console.log('bindCartButton');
   document.getElementById('cart-button')
-    .addEventListener('click', showCart);
+    .addEventListener('click', () => {
+      console.log('Нажата кнопка корзины');
+      showCart();
+    });
 }
 
 // 5) Переключатель «Сдача с»
 function bindPaymentToggle() {
-  document.getElementById('pay-cash').addEventListener('change', toggleChange);
-  document.getElementById('pay-card').addEventListener('change', toggleChange);
+  console.log('bindPaymentToggle');
+  document.getElementById('pay-cash').addEventListener('change', () => {
+    console.log('Выбран наличный расчёт');
+    toggleChange();
+  });
+  document.getElementById('pay-card').addEventListener('change', () => {
+    console.log('Выбран безналичный расчёт');
+    toggleChange();
+  });
 }
 function toggleChange() {
   document.getElementById('change-container').style.display =
@@ -51,22 +65,25 @@ function toggleChange() {
 
 // 6) Загрузка меню
 async function fetchMenu() {
+  console.log('fetchMenu — запрос к', `${API_BASE}/menu`);
   try {
     const resp = await fetch(`${API_BASE}/menu`, { mode: 'cors' });
-    if (!resp.ok) throw new Error(resp.status);
+    console.log('fetchMenu — статус ответа', resp.status);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     categories = await resp.json();
+    console.log('fetchMenu — данные получены', categories);
     renderCategories();
-    // Показать первую категорию по умолчанию
     const first = Object.keys(categories)[0];
     if (first) showItems(first);
   } catch (e) {
-    console.error(e);
+    console.error('fetchMenu — ошибка', e);
     alert('Не удалось загрузить меню');
   }
 }
 
 // 7) Рендер категорий
 function renderCategories() {
+  console.log('renderCategories');
   const ctr = document.getElementById('categories');
   ctr.innerHTML = '';
   for (let cid in categories) {
@@ -80,9 +97,11 @@ function renderCategories() {
 
 // 8) Рендер товаров и навешивание открытия модалки
 function showItems(cid) {
+  console.log('showItems — категория', cid);
   const ctr = document.getElementById('items');
   ctr.innerHTML = '';
   categories[cid].items.forEach(item => {
+    console.log('  товар:', item.id, item.name, 'has modifiers?', item.modifiers?.length);
     const col = document.createElement('div');
     col.className = 'col-12 col-sm-6 col-md-4';
     col.innerHTML = `
@@ -96,28 +115,41 @@ function showItems(cid) {
           <button class="btn coffee-btn details-btn">Подробнее</button>
         </div>
       </div>`;
-    col.querySelector('.details-btn')
-      .addEventListener('click', () => openModal(cid, item));
+    const btn = col.querySelector('.details-btn');
+    btn.addEventListener('click', () => {
+      console.log('Клик Подробнее для товара', item.id);
+      openModal(cid, item);
+    });
     ctr.append(col);
   });
 }
 
 // 9) Открытие модалки
 function openModal(categoryId, item) {
+  console.log('openModal — категория', categoryId, 'item', item.id);
   currentItem = item;
+  const modalEl = document.getElementById('productModal');
+  if (!modalEl) {
+    console.error('productModal элемент не найден в DOM');
+    return;
+  }
   document.getElementById('modal-title').textContent = item.name;
   document.getElementById('modal-image').src = item.image || 'images/placeholder.png';
   document.getElementById('modal-desc').innerHTML = item.description || 'Описание недоступно';
   renderModifiers(item.modifiers || []);
-  // Вызов Bootstrap-модали по элементу
-  const modalEl = document.getElementById('productModal');
+  console.log('openModal — вызываем bootstrap-модалку');
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   modal.show();
 }
 
 // 10) Рендер модификаторов
 function renderModifiers(mods) {
+  console.log('renderModifiers, count=', mods.length);
   const ctr = document.getElementById('modal-modifiers');
+  if (!ctr) {
+    console.error('modal-modifiers элемент не найден');
+    return;
+  }
   ctr.innerHTML = '';
   if (mods.length === 0) {
     ctr.style.display = 'none';
@@ -125,9 +157,11 @@ function renderModifiers(mods) {
   }
   ctr.style.display = 'block';
   mods.forEach(group => {
+    console.log('  группа модификаторов:', group.name);
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
     group.options.forEach(opt => {
+      console.log('    опция:', opt.name, opt.cost);
       const id = `mod-${group.id}-${opt.id}`;
       wrapper.innerHTML += `
         <div class="form-check">
@@ -145,35 +179,48 @@ function renderModifiers(mods) {
 
 // 11) Добавление из модалки
 function onModalAdd() {
+  console.log('onModalAdd — добавляем в корзину', currentItem.id);
   const selected = [];
   (currentItem.modifiers||[]).forEach(group => {
     document.getElementsByName(`mod-${group.id}`).forEach(inp => {
       if (inp.checked) selected.push(inp.value);
     });
   });
+  console.log('  выбрано модификаторов:', selected);
   addToCart(currentItem, selected);
   const modalEl = document.getElementById('productModal');
   bootstrap.Modal.getInstance(modalEl).hide();
 }
 
-// 12) Работа с корзиной
+// 12) Работа с корзиной (без изменений, но с логом)
 function loadCart() {
   cart = JSON.parse(localStorage.getItem('cartData')||'[]');
+  console.log('loadCart:', cart);
   updateCartCount();
 }
 function saveCart() {
+  console.log('saveCart:', cart);
   localStorage.setItem('cartData', JSON.stringify(cart));
 }
 function updateCartCount() {
-  document.getElementById('cart-count').textContent =
-    cart.reduce((sum,i)=>sum+i.quantity,0);
+  const cnt = cart.reduce((sum,i)=>sum+i.quantity,0);
+  console.log('updateCartCount:', cnt);
+  document.getElementById('cart-count').textContent = cnt;
 }
 function addToCart(item, mods=[]) {
+  console.log('addToCart:', item.id, 'mods', mods);
   const key = (item.externalId||item.id)+mods.join(',');
   let ci = cart.find(i=>i.key===key);
-  if (ci) ci.quantity++; else cart.push({ key, externalId:item.externalId||item.id, name:item.name, price:item.price, quantity:1, modifiers:mods });
+  if (ci) {
+    ci.quantity++;
+    console.log('  увеличили qty до', ci.quantity);
+  } else {
+    cart.push({ key, externalId:item.externalId||item.id, name:item.name, price:item.price, quantity:1, modifiers:mods });
+    console.log('  новый элемент в корзине');
+  }
   saveCart(); updateCartCount();
 }
+
 
 // 13) Переходы между экранами
 function showCart() {
