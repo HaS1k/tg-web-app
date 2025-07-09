@@ -20,11 +20,13 @@ async function loadModalTemplate() {
 const API_BASE = "http://127.0.0.1:8000";
 let cart = [], categories = {}, currentItem = null;
 
+// Кнопка корзины
 function bindCartButton() {
   document.getElementById('cart-button')
     .addEventListener('click', showCart);
 }
 
+// Переключатель «Сдача с»
 function bindPaymentToggle() {
   document.getElementById('pay-cash').addEventListener('change', toggleChange);
   document.getElementById('pay-card').addEventListener('change', toggleChange);
@@ -34,6 +36,7 @@ function toggleChange() {
     document.getElementById('pay-cash').checked ? 'block' : 'none';
 }
 
+// Загрузка меню
 async function fetchMenu() {
   try {
     const resp = await fetch(`${API_BASE}/menu`, { mode: 'cors' });
@@ -48,6 +51,7 @@ async function fetchMenu() {
   }
 }
 
+// Рендер категорий
 function renderCategories() {
   const ctr = document.getElementById('categories');
   ctr.innerHTML = '';
@@ -60,6 +64,7 @@ function renderCategories() {
   }
 }
 
+// Показ товаров и навешивание клика на «Подробнее»
 function showItems(cid) {
   const ctr = document.getElementById('items');
   ctr.innerHTML = '';
@@ -78,94 +83,138 @@ function showItems(cid) {
         </div>
       </div>`;
     col.querySelector('.details-btn')
-      .addEventListener('click', () => openModal(cid, item));
+       .addEventListener('click', () => openModal(cid, item));
     ctr.append(col);
   });
 }
 
+// Открытие модалки
 function openModal(categoryId, item) {
   currentItem = item;
   document.getElementById('modal-title').textContent = item.name;
   document.getElementById('modal-image').src = item.image||'images/placeholder.png';
   document.getElementById('modal-desc').innerHTML = item.description||'Описание недоступно';
   renderModifiers(item.modifiers||[]);
-  const modalEl = document.getElementById('productModal');
-  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById('productModal')
+  ).show();
 }
+
+// Рендер модификаторов (пропускаем первый, как делали ранее)
 function renderModifiers(mods) {
   const ctr = document.getElementById('modal-modifiers');
   ctr.innerHTML = '';
-
   if (!mods || mods.length <= 1) {
-    // Если модификаторов нет или остался только первый — скрываем всё
     ctr.style.display = 'none';
     return;
   }
   ctr.style.display = 'block';
 
-  // Пропускаем первый элемент массива
+  // Пропускаем первый элемент
   const toRender = mods.slice(1);
+  const allGroups = toRender.every(g => Array.isArray(g.options));
 
-  const allHaveOptions = toRender.every(g => Array.isArray(g.options));
-
-  if (!allHaveOptions) {
-    // плоский список опций, пропускаем первый
+  if (!allGroups) {
+    // плоский список опций
     const wrapper = document.createElement('div');
     toRender.forEach(opt => {
       const id = `mod-${currentItem.id}-${opt.id}`;
       wrapper.innerHTML += `
         <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="mod-${currentItem.id}"
-            id="${id}"
-            value="${opt.id}">
+          <input class="form-check-input"
+                 type="radio"
+                 name="mod-${currentItem.id}"
+                 id="${id}"
+                 value="${opt.id}">
           <label class="form-check-label" for="${id}">
             ${opt.name} (+${opt.cost}₽)
           </label>
         </div>`;
     });
     ctr.append(wrapper);
-    return;
+  } else {
+    // набор групп
+    toRender.forEach(group => {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
+      group.options.forEach(opt => {
+        const id = `mod-${group.id}-${opt.id}`;
+        wrapper.innerHTML += `
+          <div class="form-check">
+            <input class="form-check-input"
+                   type="${group.type==='Single'?'radio':'checkbox'}"
+                   name="mod-${group.id}"
+                   id="${id}"
+                   value="${opt.id}">
+            <label class="form-check-label" for="${id}">
+              ${opt.name} (+${opt.cost}₽)
+            </label>
+          </div>`;
+      });
+      ctr.append(wrapper);
+    });
   }
-
-  // набор групп, пропускаем первый
-  toRender.forEach(group => {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
-    group.options.forEach(opt => {
-      const id = `mod-${group.id}-${opt.id}`;
-      wrapper.innerHTML += `
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="${group.type==='Single'?'radio':'checkbox'}"
-            name="mod-${group.id}"
-            id="${id}"
-            value="${opt.id}">
-          <label class="form-check-label" for="${id}">
-            ${opt.name} (+${opt.cost}₽)
-          </label>
-        </div>`;
-    });
-    ctr.append(wrapper);
-  });
 }
 
-
+// «Добавить в корзину» из модалки — сохраним полные данные модификаторов
 function onModalAdd() {
   const selected = [];
-  (currentItem.modifiers||[]).forEach(group => {
-    document.getElementsByName(`mod-${group.id}`).forEach(inp => {
-      if (inp.checked) selected.push(inp.value);
-    });
+  (currentItem.modifiers||[]).slice(1).forEach(group => {
+    // если группа с options
+    if (Array.isArray(group.options)) {
+      group.options.forEach(opt => {
+        const inp = document.getElementById(`mod-${group.id}-${opt.id}`);
+        if (inp && inp.checked) {
+          selected.push({ 
+            group: group.name, 
+            id: opt.id, 
+            name: opt.name, 
+            cost: opt.cost 
+          });
+        }
+      });
+    } else {
+      // плоский список
+      const inp = document.getElementById(`mod-${currentItem.id}-${group.id}`);
+      if (inp && inp.checked) {
+        selected.push({ 
+          group: null, 
+          id: group.id, 
+          name: group.name, 
+          cost: group.cost 
+        });
+      }
+    }
   });
+
   addToCart(currentItem, selected);
-  const modalEl = document.getElementById('productModal');
-  bootstrap.Modal.getInstance(modalEl).hide();
+  bootstrap.Modal.getInstance(
+    document.getElementById('productModal')
+  ).hide();
 }
 
+// Добавление в cart — разные позиции по разным модификаторам, пустые стекаются
+function addToCart(item, mods=[]) {
+  const modKey = mods.map(m => m.id).join(',');
+  const key = `${item.externalId||item.id}|${modKey}`;
+  let ci = cart.find(i => i.key === key);
+  if (ci) {
+    ci.quantity++;
+  } else {
+    cart.push({
+      key,
+      externalId: item.externalId||item.id,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      modifiers: mods
+    });
+  }
+  saveCart();
+  updateCartCount();
+}
+
+// Работа с локальным хранилищем
 function loadCart() {
   cart = JSON.parse(localStorage.getItem('cartData')||'[]');
   updateCartCount();
@@ -175,15 +224,10 @@ function saveCart() {
 }
 function updateCartCount() {
   document.getElementById('cart-count').textContent =
-    cart.reduce((sum,i)=>sum+i.quantity,0);
-}
-function addToCart(item, mods=[]) {
-  const key = (item.externalId||item.id)+mods.join(',');
-  let ci = cart.find(i=>i.key===key);
-  if (ci) ci.quantity++; else cart.push({ key, externalId:item.externalId||item.id, name:item.name, price:item.price, quantity:1, modifiers:mods });
-  saveCart(); updateCartCount();
+    cart.reduce((sum, i) => sum + i.quantity, 0);
 }
 
+// Переходы между экранами
 function showCart() {
   document.getElementById('main-content').classList.add('d-none');
   document.getElementById('order-form').classList.add('d-none');
@@ -205,38 +249,56 @@ function backToCart() {
   document.getElementById('cart-content').classList.remove('d-none');
 }
 
+// Рендер корзины с отображением модификаторов
 function renderCartItems() {
   const ctr = document.getElementById('cart-items');
   ctr.innerHTML = '';
-  if (!cart.length) { ctr.innerHTML = '<p>Корзина пуста</p>'; return; }
+  if (!cart.length) {
+    ctr.innerHTML = '<p>Корзина пуста</p>';
+    return;
+  }
   let total = 0;
   cart.forEach((item, idx) => {
-    total += item.price*item.quantity;
+    total += item.price * item.quantity;
+    const modsHtml = item.modifiers.length
+      ? `<div class="cart-mods"><small>${item.modifiers.map(m => m.name).join(', ')}</small></div>`
+      : '';
     const div = document.createElement('div');
-    div.className = 'cart-item d-flex justify-content-between align-items-center mb-2';
+    div.className = 'cart-item mb-3';
     div.innerHTML = `
-      <span>${item.name}</span>
-      <div class="d-flex align-items-center">
-        <button class="btn btn-sm btn-outline-secondary me-2" onclick="changeQty(${idx},-1)">−</button>
-        <span>${item.quantity}</span>
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="changeQty(${idx},1)">+</button>
-        <span class="mx-3">${item.price*item.quantity}₽</span>
-        <button class="btn btn-sm btn-danger" onclick="removeFromCart(${idx})">×</button>
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <strong>${item.name}</strong>
+          ${modsHtml}
+        </div>
+        <div class="d-flex align-items-center">
+          <button class="btn btn-sm btn-outline-secondary me-2" onclick="changeQty(${idx}, -1)">−</button>
+          <span>${item.quantity}</span>
+          <button class="btn btn-sm btn-outline-secondary ms-2" onclick="changeQty(${idx}, 1)">+</button>
+        </div>
+        <div>
+          <span>${item.price * item.quantity}₽</span>
+          <button class="btn btn-sm btn-danger ms-3" onclick="removeFromCart(${idx})">×</button>
+        </div>
       </div>`;
     ctr.append(div);
   });
-  ctr.insertAdjacentHTML('beforeend', `<div class="cart-total"><strong>Итого: ${total}₽</strong></div>`);
+  ctr.insertAdjacentHTML('beforeend',
+    `<div class="cart-total mt-3"><strong>Итого: ${total}₽</strong></div>`
+  );
 }
-function changeQty(i, d) {
-  cart[i].quantity+=d;
-  if (cart[i].quantity<1) cart.splice(i,1);
+
+function changeQty(i, delta) {
+  cart[i].quantity += delta;
+  if (cart[i].quantity < 1) cart.splice(i, 1);
   saveCart(); renderCartItems(); updateCartCount();
 }
 function removeFromCart(i) {
-  cart.splice(i,1);
+  cart.splice(i, 1);
   saveCart(); renderCartItems(); updateCartCount();
 }
 
+// Отправка заказа в бота (модификаторы идут вместе с item.modifiers)
 function submitOrder() {
   const info = {
     name: document.getElementById('input-name').value.trim(),
@@ -249,27 +311,28 @@ function submitOrder() {
     intercom: document.getElementById('input-intercom').value.trim(),
     numPersons: document.getElementById('input-persons').value,
     paymentType: document.querySelector('input[name="payment"]:checked').value,
-    changeFrom: document.getElementById('input-change').value.trim()||null,
+    changeFrom: document.getElementById('input-change').value.trim() || null,
     comment: document.getElementById('textarea-comment').value.trim()
   };
-  if (!info.name||!info.phone||!info.street||!info.house) {
+  if (!info.name || !info.phone || !info.street || !info.house) {
     return alert('Заполните все обязательные поля.');
   }
   if (!cart.length) {
     return alert('Корзина пуста.');
   }
+
   const order = {
-    items: cart.map(i=>({
+    items: cart.map(i => ({
       externalId: i.externalId,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity,
-      modifiers: i.modifiers
+      name:       i.name,
+      price:      i.price,
+      quantity:   i.quantity,
+      modifiers:  i.modifiers    // массив {group, id, name, cost}
     })),
     delivery_info: info
   };
+
   window.Telegram.WebApp.sendData(JSON.stringify(order));
   localStorage.removeItem('cartData');
   window.Telegram.WebApp.close();
 }
-
