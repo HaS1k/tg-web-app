@@ -95,10 +95,9 @@ function bindCartButton() {
     .addEventListener('click', showCart);
 }
 
-// Переключатель «Сдача с»
 function bindPaymentToggle() {
   document.getElementById('pay-cash').addEventListener('change', toggleChange);
-  document.getElementById('pay-card').addEventListener('change', toggleChange);
+ document.getElementById('pay-online').addEventListener('change', toggleChange);
 }
 function toggleChange() {
   document.getElementById('change-container').style.display =
