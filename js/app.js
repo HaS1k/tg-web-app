@@ -1,13 +1,21 @@
 // js/app.js
-
+// js/app.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1) Обработка редактирования заказа из order_data
   const params = new URLSearchParams(window.location.search);
-  if (params.has('order_data')) {
-    const data = JSON.parse(atob(params.get('order_data')));
-    console.log('Редактируем заказ:', data);
 
+  if (params.has('order_data')) {
+    // 1) Достаем url-safe base64
+    let raw = params.get('order_data');
+    // 2) Конвертируем в «обычный» base64
+    raw = raw.replace(/-/g, '+').replace(/_/g, '/');
+    // 3) Дополняем до правильной длины (кратной 4)
+    const pad = raw.length % 4;
+    if (pad) raw += '='.repeat(4 - pad);
+
+    // 4) Декодируем и парсим JSON
+    const data = JSON.parse(atob(raw));
+    console.log('Редактируем заказ:', data);
     // Заполняем корзину из data.items
     cart = data.items.map(it => ({
       key: `${it.externalId}|${(it.modifiers||[]).map(m => m.id).join(',')}`,
