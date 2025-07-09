@@ -128,48 +128,35 @@
     <div id="order-form" class="d-none">
       <button class="btn coffee-btn mb-3" onclick="backToCart()">← Назад</button>
       <form onsubmit="submitOrder(); return false;">
+        <!-- ФИО, телефон, адрес, количество персон... -->
         <div class="form-section mb-3">
           <label for="input-name" class="form-label">ФИО</label>
-          <input type="text" id="input-name" class="form-control" placeholder="Иван Иванов" required />
+          <input type="text" id="input-name" class="form-control" required />
         </div>
-
         <div class="form-section mb-3">
           <label for="input-phone" class="form-label">Телефон</label>
-          <input type="tel" id="input-phone" class="form-control" placeholder="+7 (___) ___-__-__" required />
+          <input type="tel" id="input-phone" class="form-control" required />
         </div>
-
         <div class="form-section mb-3">
-          <label for="input-street" class="form-label">Адрес доставки</label>
+          <label for="input-street" class="form-label">Улица, дом</label>
           <div class="row g-2">
-            <div class="col-8">
-              <input type="text" id="input-street" class="form-control" placeholder="Улица" required />
-            </div>
-            <div class="col-4">
-              <input type="text" id="input-house" class="form-control" placeholder="Дом" required />
-            </div>
-          </div>
-          <div class="row g-2 mt-2">
-            <div class="col-3">
-              <input type="text" id="input-entrance" class="form-control" placeholder="Подъезд" />
-            </div>
-            <div class="col-3">
-              <input type="text" id="input-floor" class="form-control" placeholder="Этаж" />
-            </div>
-            <div class="col-3">
-              <input type="text" id="input-apartment" class="form-control" placeholder="Квартира" />
-            </div>
-            <div class="col-3">
-              <input type="text" id="input-intercom" class="form-control" placeholder="Домофон" />
-            </div>
+            <div class="col-8"><input type="text" id="input-street" class="form-control" required /></div>
+            <div class="col-4"><input type="text" id="input-house" class="form-control" required /></div>
           </div>
         </div>
-
+        <!-- Подъезд/этаж/квартира/домофон -->
+        <div class="form-section mb-3 row g-2">
+          <div class="col-3"><input type="text" id="input-entrance" class="form-control" placeholder="Подъезд" /></div>
+          <div class="col-3"><input type="text" id="input-floor" class="form-control" placeholder="Этаж" /></div>
+          <div class="col-3"><input type="text" id="input-apartment" class="form-control" placeholder="Квартира" /></div>
+          <div class="col-3"><input type="text" id="input-intercom" class="form-control" placeholder="Домофон" /></div>
+        </div>
         <div class="form-section mb-3">
           <label class="form-label">Количество персон</label>
           <input type="number" id="input-persons" class="form-control" min="1" value="1" required />
         </div>
 
-        <!-- Поле выбора времени доставки полностью убрано -->
+        <!-- Время доставки полностью убрано -->
 
         <div class="form-section mb-3">
           <label class="form-label">Способ оплаты</label>
@@ -187,8 +174,8 @@
         </div>
 
         <div class="form-section mb-3">
-          <label for="textarea-comment" class="form-label">Комментарий к заказу</label>
-          <textarea id="textarea-comment" class="form-control" rows="2" placeholder="Дополнительно..."></textarea>
+          <label for="textarea-comment" class="form-label">Комментарий</label>
+          <textarea id="textarea-comment" class="form-control" rows="2"></textarea>
         </div>
 
         <div class="d-grid gap-2">
@@ -198,7 +185,7 @@
     </div>
   </div>
 
-  <!-- Контейнер для модального окна товара -->
+  <!-- Контейнер для модального окна -->
   <div id="product-modal-container"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
