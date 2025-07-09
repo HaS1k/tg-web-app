@@ -366,30 +366,39 @@ function removeFromCart(i) {
   cart.splice(i, 1);
   saveCart(); renderCartItems(); updateCartCount();
 }
-
 // Отправка заказа в бота (модификаторы идут вместе с item.modifiers)
 function submitOrder() {
+  // 0) Проверяем, что функция вообще вызывается
+  console.log("🔥 submitOrder fired");
+
+  // 1) Собираем информацию о доставке
   const info = {
-    name: document.getElementById('input-name').value.trim(),
-    phone: document.getElementById('input-phone').value.trim(),
-    street: document.getElementById('input-street').value.trim(),
-    house: document.getElementById('input-house').value.trim(),
-    entrance: document.getElementById('input-entrance').value.trim(),
-    floor: document.getElementById('input-floor').value.trim(),
-    apartment: document.getElementById('input-apartment').value.trim(),
-    intercom: document.getElementById('input-intercom').value.trim(),
+    name:       document.getElementById('input-name').value.trim(),
+    phone:      document.getElementById('input-phone').value.trim(),
+    street:     document.getElementById('input-street').value.trim(),
+    house:      document.getElementById('input-house').value.trim(),
+    entrance:   document.getElementById('input-entrance').value.trim(),
+    floor:      document.getElementById('input-floor').value.trim(),
+    apartment:  document.getElementById('input-apartment').value.trim(),
+    intercom:   document.getElementById('input-intercom').value.trim(),
     numPersons: document.getElementById('input-persons').value,
     paymentType: document.querySelector('input[name="payment"]:checked').value,
     changeFrom: document.getElementById('input-change').value.trim() || null,
-    comment: document.getElementById('textarea-comment').value.trim()
+    comment:    document.getElementById('textarea-comment').value.trim()
   };
+  console.log("   delivery_info:", info);
+
+  // 2) Валидация
   if (!info.name || !info.phone || !info.street || !info.house) {
-    return alert('Заполните все обязательные поля.');
+    alert('Пожалуйста, заполните все обязательные поля.');
+    return;
   }
   if (!cart.length) {
-    return alert('Корзина пуста.');
+    alert('Ваша корзина пуста.');
+    return;
   }
 
+  // 3) Формируем итоговый объект
   const order = {
     items: cart.map(i => ({
       externalId: i.externalId,
@@ -400,8 +409,15 @@ function submitOrder() {
     })),
     delivery_info: info
   };
+  console.log("   order payload:", order);
 
+  // 4) Отправка в Telegram Bot
+  console.log("   calling sendData...");
   window.Telegram.WebApp.sendData(JSON.stringify(order));
+  console.log("   sendData called");
+
+  // 5) Очистка и закрытие
   localStorage.removeItem('cartData');
   window.Telegram.WebApp.close();
+  console.log("   WebApp.closed");
 }
