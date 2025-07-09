@@ -1,89 +1,54 @@
 // js/app.js
 
-// 1) Подготовка инициализации после полной загрузки страницы
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOMContentLoaded — старт инициализации');
   await loadModalTemplate();
-  console.log('Шаблон модалки загружен');
-
   const tg = window.Telegram.WebApp;
   tg.expand();
-  console.log('Telegram WebApp расширен');
-
   loadCart();
-  console.log('Корзина загружена:', cart);
-
   bindCartButton();
   bindPaymentToggle();
-
   await fetchMenu();
-  console.log('Меню загружено:', categories);
 });
 
-// 2) Загрузка и инициализация модалки
 async function loadModalTemplate() {
-  console.log('loadModalTemplate — запрос components/product-modal.html');
   const html = await fetch('components/product-modal.html').then(r => r.text());
   document.getElementById('product-modal-container').innerHTML = html;
-  console.log('Модалка вставлена в DOM');
   document.getElementById('modal-add-btn')
     .addEventListener('click', onModalAdd);
 }
 
-// 3) Общие переменные
 const API_BASE = "http://127.0.0.1:8000";
-let cart = [];
-let categories = {};
-let currentItem = null;
+let cart = [], categories = {}, currentItem = null;
 
-// 4) Привязка кнопки корзины
 function bindCartButton() {
-  console.log('bindCartButton');
   document.getElementById('cart-button')
-    .addEventListener('click', () => {
-      console.log('Нажата кнопка корзины');
-      showCart();
-    });
+    .addEventListener('click', showCart);
 }
 
-// 5) Переключатель «Сдача с»
 function bindPaymentToggle() {
-  console.log('bindPaymentToggle');
-  document.getElementById('pay-cash').addEventListener('change', () => {
-    console.log('Выбран наличный расчёт');
-    toggleChange();
-  });
-  document.getElementById('pay-card').addEventListener('change', () => {
-    console.log('Выбран безналичный расчёт');
-    toggleChange();
-  });
+  document.getElementById('pay-cash').addEventListener('change', toggleChange);
+  document.getElementById('pay-card').addEventListener('change', toggleChange);
 }
 function toggleChange() {
   document.getElementById('change-container').style.display =
     document.getElementById('pay-cash').checked ? 'block' : 'none';
 }
 
-// 6) Загрузка меню
 async function fetchMenu() {
-  console.log('fetchMenu — запрос к', `${API_BASE}/menu`);
   try {
     const resp = await fetch(`${API_BASE}/menu`, { mode: 'cors' });
-    console.log('fetchMenu — статус ответа', resp.status);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error(resp.status);
     categories = await resp.json();
-    console.log('fetchMenu — данные получены', categories);
     renderCategories();
     const first = Object.keys(categories)[0];
     if (first) showItems(first);
   } catch (e) {
-    console.error('fetchMenu — ошибка', e);
+    console.error(e);
     alert('Не удалось загрузить меню');
   }
 }
 
-// 7) Рендер категорий
 function renderCategories() {
-  console.log('renderCategories');
   const ctr = document.getElementById('categories');
   ctr.innerHTML = '';
   for (let cid in categories) {
@@ -95,13 +60,10 @@ function renderCategories() {
   }
 }
 
-// 8) Рендер товаров и навешивание открытия модалки
 function showItems(cid) {
-  console.log('showItems — категория', cid);
   const ctr = document.getElementById('items');
   ctr.innerHTML = '';
   categories[cid].items.forEach(item => {
-    console.log('  товар:', item.id, item.name, 'has modifiers?', item.modifiers?.length);
     const col = document.createElement('div');
     col.className = 'col-12 col-sm-6 col-md-4';
     col.innerHTML = `
@@ -115,53 +77,53 @@ function showItems(cid) {
           <button class="btn coffee-btn details-btn">Подробнее</button>
         </div>
       </div>`;
-    const btn = col.querySelector('.details-btn');
-    btn.addEventListener('click', () => {
-      console.log('Клик Подробнее для товара', item.id);
-      openModal(cid, item);
-    });
+    col.querySelector('.details-btn')
+      .addEventListener('click', () => openModal(cid, item));
     ctr.append(col);
   });
 }
 
-// 9) Открытие модалки
 function openModal(categoryId, item) {
-  console.log('openModal — категория', categoryId, 'item', item.id);
   currentItem = item;
-  const modalEl = document.getElementById('productModal');
-  if (!modalEl) {
-    console.error('productModal элемент не найден в DOM');
-    return;
-  }
   document.getElementById('modal-title').textContent = item.name;
-  document.getElementById('modal-image').src = item.image || 'images/placeholder.png';
-  document.getElementById('modal-desc').innerHTML = item.description || 'Описание недоступно';
-  renderModifiers(item.modifiers || []);
-  console.log('openModal — вызываем bootstrap-модалку');
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  modal.show();
+  document.getElementById('modal-image').src = item.image||'images/placeholder.png';
+  document.getElementById('modal-desc').innerHTML = item.description||'Описание недоступно';
+  renderModifiers(item.modifiers||[]);
+  const modalEl = document.getElementById('productModal');
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
-// 10) Рендер модификаторов
 function renderModifiers(mods) {
-  console.log('renderModifiers, count=', mods.length);
   const ctr = document.getElementById('modal-modifiers');
-  if (!ctr) {
-    console.error('modal-modifiers элемент не найден');
-    return;
-  }
   ctr.innerHTML = '';
-  if (mods.length === 0) {
+  if (!mods || mods.length === 0) {
     ctr.style.display = 'none';
     return;
   }
   ctr.style.display = 'block';
+
+  // Если первый элемент не содержит .options, считаем весь массив плоским списком опций
+  if (typeof mods[0].options === 'undefined') {
+    const wrapper = document.createElement('div');
+    mods.forEach(opt => {
+      const id = `mod-${opt.id}`;
+      wrapper.innerHTML += `
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mod-${currentItem.id}" id="${id}" value="${opt.id}">
+          <label class="form-check-label" for="${id}">
+            ${opt.name} (+${opt.cost}₽)
+          </label>
+        </div>`;
+    });
+    ctr.append(wrapper);
+    return;
+  }
+
+  // Иначе — обычная логика для групп модификаторов
   mods.forEach(group => {
-    console.log('  группа модификаторов:', group.name);
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
     group.options.forEach(opt => {
-      console.log('    опция:', opt.name, opt.cost);
       const id = `mod-${group.id}-${opt.id}`;
       wrapper.innerHTML += `
         <div class="form-check">
@@ -177,52 +139,36 @@ function renderModifiers(mods) {
   });
 }
 
-// 11) Добавление из модалки
 function onModalAdd() {
-  console.log('onModalAdd — добавляем в корзину', currentItem.id);
   const selected = [];
   (currentItem.modifiers||[]).forEach(group => {
     document.getElementsByName(`mod-${group.id}`).forEach(inp => {
       if (inp.checked) selected.push(inp.value);
     });
   });
-  console.log('  выбрано модификаторов:', selected);
   addToCart(currentItem, selected);
   const modalEl = document.getElementById('productModal');
   bootstrap.Modal.getInstance(modalEl).hide();
 }
 
-// 12) Работа с корзиной (без изменений, но с логом)
 function loadCart() {
   cart = JSON.parse(localStorage.getItem('cartData')||'[]');
-  console.log('loadCart:', cart);
   updateCartCount();
 }
 function saveCart() {
-  console.log('saveCart:', cart);
   localStorage.setItem('cartData', JSON.stringify(cart));
 }
 function updateCartCount() {
-  const cnt = cart.reduce((sum,i)=>sum+i.quantity,0);
-  console.log('updateCartCount:', cnt);
-  document.getElementById('cart-count').textContent = cnt;
+  document.getElementById('cart-count').textContent =
+    cart.reduce((sum,i)=>sum+i.quantity,0);
 }
 function addToCart(item, mods=[]) {
-  console.log('addToCart:', item.id, 'mods', mods);
   const key = (item.externalId||item.id)+mods.join(',');
   let ci = cart.find(i=>i.key===key);
-  if (ci) {
-    ci.quantity++;
-    console.log('  увеличили qty до', ci.quantity);
-  } else {
-    cart.push({ key, externalId:item.externalId||item.id, name:item.name, price:item.price, quantity:1, modifiers:mods });
-    console.log('  новый элемент в корзине');
-  }
+  if (ci) ci.quantity++; else cart.push({ key, externalId:item.externalId||item.id, name:item.name, price:item.price, quantity:1, modifiers:mods });
   saveCart(); updateCartCount();
 }
 
-
-// 13) Переходы между экранами
 function showCart() {
   document.getElementById('main-content').classList.add('d-none');
   document.getElementById('order-form').classList.add('d-none');
@@ -244,22 +190,21 @@ function backToCart() {
   document.getElementById('cart-content').classList.remove('d-none');
 }
 
-// 14) Рендер и изменение корзины
 function renderCartItems() {
   const ctr = document.getElementById('cart-items');
   ctr.innerHTML = '';
   if (!cart.length) { ctr.innerHTML = '<p>Корзина пуста</p>'; return; }
   let total = 0;
   cart.forEach((item, idx) => {
-    total += item.price * item.quantity;
+    total += item.price*item.quantity;
     const div = document.createElement('div');
     div.className = 'cart-item d-flex justify-content-between align-items-center mb-2';
     div.innerHTML = `
       <span>${item.name}</span>
       <div class="d-flex align-items-center">
-        <button class="btn btn-sm btn-outline-secondary me-2" onclick="changeQty(${idx}, -1)">−</button>
+        <button class="btn btn-sm btn-outline-secondary me-2" onclick="changeQty(${idx},-1)">−</button>
         <span>${item.quantity}</span>
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="changeQty(${idx}, +1)">+</button>
+        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="changeQty(${idx},1)">+</button>
         <span class="mx-3">${item.price*item.quantity}₽</span>
         <button class="btn btn-sm btn-danger" onclick="removeFromCart(${idx})">×</button>
       </div>`;
@@ -267,9 +212,9 @@ function renderCartItems() {
   });
   ctr.insertAdjacentHTML('beforeend', `<div class="cart-total"><strong>Итого: ${total}₽</strong></div>`);
 }
-function changeQty(i, delta) {
-  cart[i].quantity += delta;
-  if (cart[i].quantity < 1) cart.splice(i,1);
+function changeQty(i, d) {
+  cart[i].quantity+=d;
+  if (cart[i].quantity<1) cart.splice(i,1);
   saveCart(); renderCartItems(); updateCartCount();
 }
 function removeFromCart(i) {
@@ -277,7 +222,6 @@ function removeFromCart(i) {
   saveCart(); renderCartItems(); updateCartCount();
 }
 
-// 15) Отправка заказа (время доставки убрано)
 function submitOrder() {
   const info = {
     name: document.getElementById('input-name').value.trim(),
@@ -290,7 +234,7 @@ function submitOrder() {
     intercom: document.getElementById('input-intercom').value.trim(),
     numPersons: document.getElementById('input-persons').value,
     paymentType: document.querySelector('input[name="payment"]:checked').value,
-    changeFrom: document.getElementById('input-change').value.trim() || null,
+    changeFrom: document.getElementById('input-change').value.trim()||null,
     comment: document.getElementById('textarea-comment').value.trim()
   };
   if (!info.name||!info.phone||!info.street||!info.house) {
@@ -299,10 +243,18 @@ function submitOrder() {
   if (!cart.length) {
     return alert('Корзина пуста.');
   }
-  const order = { items: cart.map(i=>({
-    externalId: i.externalId, name: i.name, price: i.price, quantity: i.quantity, modifiers: i.modifiers
-  })), delivery_info: info };
+  const order = {
+    items: cart.map(i=>({
+      externalId: i.externalId,
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity,
+      modifiers: i.modifiers
+    })),
+    delivery_info: info
+  };
   window.Telegram.WebApp.sendData(JSON.stringify(order));
   localStorage.removeItem('cartData');
   window.Telegram.WebApp.close();
 }
+
