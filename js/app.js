@@ -316,8 +316,6 @@ function backToCart() {
   document.getElementById('order-form').classList.add('d-none');
   document.getElementById('cart-content').classList.remove('d-none');
 }
-
-// Рендер корзины с отображением модификаторов
 function renderCartItems() {
   const ctr = document.getElementById('cart-items');
   ctr.innerHTML = '';
@@ -327,9 +325,13 @@ function renderCartItems() {
   }
   let total = 0;
   cart.forEach((item, idx) => {
-    total += item.price * item.quantity;
+    // сумма модификаторов для одной позиции
+    const modsSum = item.modifiers.reduce((sum, m) => sum + m.cost, 0);
+    const unitPrice = item.price + modsSum;
+    total += unitPrice * item.quantity;
+
     const modsHtml = item.modifiers.length
-      ? `<div class="cart-mods"><small>${item.modifiers.map(m => m.name).join(', ')}</small></div>`
+      ? `<div class="cart-mods"><small>${item.modifiers.map(m => `${m.name} (+${m.cost}₽)`).join(', ')}</small></div>`
       : '';
     const div = document.createElement('div');
     div.className = 'cart-item mb-3';
@@ -345,7 +347,7 @@ function renderCartItems() {
           <button class="btn btn-sm btn-outline-secondary ms-2" onclick="changeQty(${idx}, 1)">+</button>
         </div>
         <div>
-          <span>${item.price * item.quantity}₽</span>
+          <span>${unitPrice * item.quantity}₽</span>
           <button class="btn btn-sm btn-danger ms-3" onclick="removeFromCart(${idx})">×</button>
         </div>
       </div>`;
@@ -399,13 +401,16 @@ function submitOrder() {
 
   // 3) Формируем итоговый объект
   const order = {
-    items: cart.map(i => ({
-      externalId: i.externalId,
-      name:       i.name,
-      price:      i.price,
-      quantity:   i.quantity,
-      modifiers:  i.modifiers    // массив {group, id, name, cost}
-    })),
+    items: cart.map(i => {
+      const modsSum = i.modifiers.reduce((s, m) => s + m.cost, 0);
+      return {
+        externalId: i.externalId,
+        name:       i.name,
+        price:      i.price + modsSum,       // <--- сюда
+        quantity:   i.quantity,
+        modifiers:  i.modifiers
+      };
+    }),
     delivery_info: info
   };
   console.log("   order payload:", order);
