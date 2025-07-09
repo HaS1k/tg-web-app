@@ -1,22 +1,38 @@
 // js/app.js
-// js/app.js
+
+// Утилита для корректной декодировки URL-safe Base64 с UTF-8
+function b64DecodeUnicode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = str.length % 4;
+  if (pad) str += '='.repeat(4 - pad);
+  return decodeURIComponent(
+    atob(str)
+      .split('')
+      .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+      .join('')
+  );
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 1) Всегда грузим шаблон модалки и расширяем WebApp
+  await loadModalTemplate();
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  // 2) Привязываем кнопку корзины и переключатель «Сдача с»
+  bindCartButton();
+  bindPaymentToggle();
+
+  // 3) Читаем параметры URL — может быть menu_data или order_data
   const params = new URLSearchParams(window.location.search);
-
+  let isEditing = false;
   if (params.has('order_data')) {
-    // 1) Достаем url-safe base64
-    let raw = params.get('order_data');
-    // 2) Конвертируем в «обычный» base64
-    raw = raw.replace(/-/g, '+').replace(/_/g, '/');
-    // 3) Дополняем до правильной длины (кратной 4)
-    const pad = raw.length % 4;
-    if (pad) raw += '='.repeat(4 - pad);
+    isEditing = true;
+    // декодируем безопасный Base64 в JSON
+    const raw = params.get('order_data');
+    const data = JSON.parse(b64DecodeUnicode(raw));
 
-    // 4) Декодируем и парсим JSON
-    const data = JSON.parse(atob(raw));
-    console.log('Редактируем заказ:', data);
-    // Заполняем корзину из data.items
+    // заполняем корзину
     cart = data.items.map(it => ({
       key: `${it.externalId}|${(it.modifiers||[]).map(m => m.id).join(',')}`,
       externalId: it.externalId,
@@ -28,42 +44,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveCart();
     updateCartCount();
 
-    // Заполняем форму доставки
-    const del = data.delivery_info;
-    document.getElementById('input-name').value       = del.name;
-    document.getElementById('input-phone').value      = del.phone;
-    document.getElementById('input-street').value     = del.street;
-    document.getElementById('input-house').value      = del.house;
-    document.getElementById('input-entrance').value   = del.entrance;
-    document.getElementById('input-floor').value      = del.floor;
-    document.getElementById('input-apartment').value  = del.apartment;
-    document.getElementById('input-intercom').value   = del.intercom;
-    document.getElementById('input-persons').value    = del.numPersons;
-    if (del.paymentType === 'cash') {
+    // заполняем форму доставки
+    const d = data.delivery_info;
+    document.getElementById('input-name').value       = d.name;
+    document.getElementById('input-phone').value      = d.phone;
+    document.getElementById('input-street').value     = d.street;
+    document.getElementById('input-house').value      = d.house;
+    document.getElementById('input-entrance').value   = d.entrance;
+    document.getElementById('input-floor').value      = d.floor;
+    document.getElementById('input-apartment').value  = d.apartment;
+    document.getElementById('input-intercom').value   = d.intercom;
+    document.getElementById('input-persons').value    = d.numPersons;
+    if (d.paymentType === 'cash') {
       document.getElementById('pay-cash').checked = true;
     } else {
       document.getElementById('pay-card').checked = true;
     }
     toggleChange();
-    document.getElementById('input-change').value    = del.changeFrom  || '';
-    document.getElementById('textarea-comment').value = del.comment     || '';
-
-    // Загружаем меню и показываем форму редактирования
-    await fetchMenu();
-    showCart();
-    showOrderForm();
-    return;
+    document.getElementById('input-change').value    = d.changeFrom  || '';
+    document.getElementById('textarea-comment').value = d.comment     || '';
   }
 
-  // 2) Обычная инициализация
-  await loadModalTemplate();
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+  // 4) Загружаем меню и рендерим категории/товары
   loadCart();
-  bindCartButton();
-  bindPaymentToggle();
   await fetchMenu();
+
+  // 5) Если это редактирование — показываем корзину и форму
+  if (isEditing) {
+    showCart();
+    showOrderForm();
+  }
 });
+
+
+
 
 async function loadModalTemplate() {
   const html = await fetch('components/product-modal.html').then(r => r.text());
