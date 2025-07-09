@@ -92,24 +92,35 @@ function openModal(categoryId, item) {
   const modalEl = document.getElementById('productModal');
   bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
-
 function renderModifiers(mods) {
   const ctr = document.getElementById('modal-modifiers');
   ctr.innerHTML = '';
-  if (!mods || mods.length === 0) {
+
+  if (!mods || mods.length <= 1) {
+    // Если модификаторов нет или остался только первый — скрываем всё
     ctr.style.display = 'none';
     return;
   }
   ctr.style.display = 'block';
 
-  // Если первый элемент не содержит .options, считаем весь массив плоским списком опций
-  if (typeof mods[0].options === 'undefined') {
+  // Пропускаем первый элемент массива
+  const toRender = mods.slice(1);
+
+  const allHaveOptions = toRender.every(g => Array.isArray(g.options));
+
+  if (!allHaveOptions) {
+    // плоский список опций, пропускаем первый
     const wrapper = document.createElement('div');
-    mods.forEach(opt => {
-      const id = `mod-${opt.id}`;
+    toRender.forEach(opt => {
+      const id = `mod-${currentItem.id}-${opt.id}`;
       wrapper.innerHTML += `
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="mod-${currentItem.id}" id="${id}" value="${opt.id}">
+          <input
+            class="form-check-input"
+            type="radio"
+            name="mod-${currentItem.id}"
+            id="${id}"
+            value="${opt.id}">
           <label class="form-check-label" for="${id}">
             ${opt.name} (+${opt.cost}₽)
           </label>
@@ -119,17 +130,20 @@ function renderModifiers(mods) {
     return;
   }
 
-  // Иначе — обычная логика для групп модификаторов
-  mods.forEach(group => {
+  // набор групп, пропускаем первый
+  toRender.forEach(group => {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `<p class="mb-1"><strong>${group.name}</strong></p>`;
     group.options.forEach(opt => {
       const id = `mod-${group.id}-${opt.id}`;
       wrapper.innerHTML += `
         <div class="form-check">
-          <input class="form-check-input"
-                 type="${group.type==='Single'?'radio':'checkbox'}"
-                 name="mod-${group.id}" id="${id}" value="${opt.id}">
+          <input
+            class="form-check-input"
+            type="${group.type==='Single'?'radio':'checkbox'}"
+            name="mod-${group.id}"
+            id="${id}"
+            value="${opt.id}">
           <label class="form-check-label" for="${id}">
             ${opt.name} (+${opt.cost}₽)
           </label>
@@ -138,6 +152,7 @@ function renderModifiers(mods) {
     ctr.append(wrapper);
   });
 }
+
 
 function onModalAdd() {
   const selected = [];
