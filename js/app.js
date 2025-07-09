@@ -1,6 +1,53 @@
 // js/app.js
 
+
 document.addEventListener('DOMContentLoaded', async () => {
+  // 1) Обработка редактирования заказа из order_data
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('order_data')) {
+    const data = JSON.parse(atob(params.get('order_data')));
+    console.log('Редактируем заказ:', data);
+
+    // Заполняем корзину из data.items
+    cart = data.items.map(it => ({
+      key: `${it.externalId}|${(it.modifiers||[]).map(m => m.id).join(',')}`,
+      externalId: it.externalId,
+      name: it.name,
+      price: it.price,
+      quantity: it.quantity,
+      modifiers: it.modifiers || []
+    }));
+    saveCart();
+    updateCartCount();
+
+    // Заполняем форму доставки
+    const del = data.delivery_info;
+    document.getElementById('input-name').value       = del.name;
+    document.getElementById('input-phone').value      = del.phone;
+    document.getElementById('input-street').value     = del.street;
+    document.getElementById('input-house').value      = del.house;
+    document.getElementById('input-entrance').value   = del.entrance;
+    document.getElementById('input-floor').value      = del.floor;
+    document.getElementById('input-apartment').value  = del.apartment;
+    document.getElementById('input-intercom').value   = del.intercom;
+    document.getElementById('input-persons').value    = del.numPersons;
+    if (del.paymentType === 'cash') {
+      document.getElementById('pay-cash').checked = true;
+    } else {
+      document.getElementById('pay-card').checked = true;
+    }
+    toggleChange();
+    document.getElementById('input-change').value    = del.changeFrom  || '';
+    document.getElementById('textarea-comment').value = del.comment     || '';
+
+    // Загружаем меню и показываем форму редактирования
+    await fetchMenu();
+    showCart();
+    showOrderForm();
+    return;
+  }
+
+  // 2) Обычная инициализация
   await loadModalTemplate();
   const tg = window.Telegram.WebApp;
   tg.expand();
